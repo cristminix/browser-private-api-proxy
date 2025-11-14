@@ -13,18 +13,6 @@ declare global {
   }
 }
 import { socket, sendToSocket } from "./socket-client";
-// Define custom properties for XMLHttpRequest
-interface XMLHttpRequest {
-  _requestInfo?: {
-    method: string;
-    url: string | URL;
-    async: boolean;
-    user?: string | null;
-    password?: string | null;
-  };
-  onload?: (this: XMLHttpRequest, ev: Event) => any;
-  onerror?: (this: XMLHttpRequest, ev: Event) => any;
-}
 
 //
 // This code runs in the page context, not the content script context
@@ -166,109 +154,12 @@ if (!(window as any).fetchInterceptorInjected) {
     }
   };
 
-  // Also intercept XMLHttpRequest for completeness
-  const originalXHR = window.XMLHttpRequest;
-  const originalOpen = originalXHR.prototype.open;
-  const originalSend = originalXHR.prototype.send;
-
-  // Override XMLHttpRequest open method
-  (window.XMLHttpRequest.prototype as any).open = function (
-    this: XMLHttpRequest,
-    method: string,
-    url: string,
-    async: boolean = true,
-    user?: string | null,
-    password?: string | null
-  ) {
-    // Store request info for later use in send
-    this._requestInfo = { method, url, async, user, password };
-    return originalOpen.apply(this, arguments as any);
-  };
-
-  // Override XMLHttpRequest send method
-  (window.XMLHttpRequest.prototype as any).send = function (
-    this: XMLHttpRequest,
-    body?: any
-  ) {
-    const requestInfo = this._requestInfo;
-    console.log("[CRXJS] Intercepted XMLHttpRequest:", {
-      method: requestInfo?.method,
-      url: requestInfo?.url,
-      body: body,
-    });
-
-    // Prepare request data to send to socket.io server
-    const requestData = {
-      type: "xhr_request",
-      timestamp: Date.now(),
-      method: requestInfo?.method,
-      url: requestInfo?.url,
-      body: body,
-    };
-
-    // Send request data to socket.io server
-    sendToSocket(requestData);
-
-    // Store original event handlers to call them after our processing
-    const originalOnLoad = this.onload;
-    const originalOnError = this.onerror;
-
-    // Set up response handlers
-    this.onload = function (this: XMLHttpRequest, ev: Event) {
-      console.log("[CRXJS] XMLHttpRequest response:", {
-        status: (this as any).status,
-        statusText: (this as any).statusText,
-        response: (this as any).response,
-      });
-
-      // Send response data to socket.io server
-      const responseData = {
-        type: "xhr_response",
-        timestamp: Date.now(),
-        method: requestInfo?.method,
-        url: requestInfo?.url,
-        status: (this as any).status,
-        statusText: (this as any).statusText,
-        response: (this as any).response,
-      };
-      sendToSocket(responseData);
-
-      // Call original onload if it exists
-      if (originalOnLoad) {
-        originalOnLoad.call(this, ev);
-      }
-    };
-
-    this.onerror = function (this: XMLHttpRequest, ev: Event) {
-      console.error("[CRXJS] XMLHttpRequest error:", {
-        method: requestInfo?.method,
-        url: requestInfo?.url,
-      });
-
-      // Send error data to socket.io server
-      const errorData = {
-        type: "xhr_error",
-        timestamp: Date.now(),
-        method: requestInfo?.method,
-        url: requestInfo?.url,
-        error: "XMLHttpRequest error",
-      };
-      sendToSocket(errorData);
-
-      // Call original onerror if it exists
-      if (originalOnError) {
-        originalOnError.call(this, ev);
-      }
-    };
-
-    return originalSend.apply(this, arguments as any);
-  };
 
   // Mark as injected to prevent duplicate injection
   (window as any).fetchInterceptorInjected = true;
 
   console.log(
-    "[CRXJS] Fetch and XMLHttpRequest interception enabled via DOM injection"
+    "[CRXJS] Fetch interception enabled via DOM injection"
   );
 }
 

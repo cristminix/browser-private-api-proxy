@@ -9,6 +9,17 @@ This template helps you quickly start developing Chrome extensions with Svelte, 
 - Vite build tool
 - CRXJS Vite plugin integration
 - Chrome extension manifest configuration
+- Socket.io client for real-time communication with proxy server
+- Fetch API interception for monitoring and proxying requests
+
+## Socket.io Client Integration
+
+The extension includes a socket.io client that enables real-time communication with a proxy server. Key features include:
+
+- Automatic connection to `http://localhost:4001` when the extension loads
+- Fetch API interception that forwards requests and responses to the socket.io server
+- Error handling and automatic reconnection capabilities
+- Message queuing when the socket is not connected
 
 ## Quick Start
 

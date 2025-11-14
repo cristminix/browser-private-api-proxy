@@ -23,6 +23,8 @@ This is a Chrome extension project built with Svelte 5, TypeScript, and Vite usi
 2. **Content Script** (`src/content/main.ts`): Injects a Svelte app into web pages and runs on all HTTPS pages
 3. **Popup UI** (`src/popup/`): The extension's popup interface when clicking the extension icon
 4. **Side Panel** (`src/sidepanel/`): Provides a side panel interface for the extension
+5. **Socket.io Client** (`src/content/socket-client.ts`): Establishes real-time communication with proxy server at `http://localhost:4001`, handles connection management and message passing
+6. **Fetch Interceptor** (`src/content/fetch-injector.ts`): Intercepts fetch API calls and forwards requests/responses to the socket.io server for monitoring and proxying
 
 ### Technologies
 
@@ -31,6 +33,7 @@ This is a Chrome extension project built with Svelte 5, TypeScript, and Vite usi
 - Vite (build tool and development server)
 - CRXJS (Chrome extension development plugin for Vite)
 - PNPM (package manager)
+- Socket.io (real-time communication with proxy server)
 
 ## Development Commands
 
@@ -70,6 +73,8 @@ This creates a production build of the extension.
 - Popup UI should be placed in `src/popup/`
 - Side panel UI should be placed in `src/sidepanel/`
 - The project includes a zip-pack plugin that creates release packages in the `release` directory
+- Socket.io client connects to `http://localhost:4001` by default - make sure your proxy server is running on this endpoint
+- Fetch interceptor captures all fetch API calls and sends them to the socket.io server with types: "fetch_request", "fetch_response", or "fetch_error"
 
 ### Code Style Guidelines
 
