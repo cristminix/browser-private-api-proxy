@@ -1,6 +1,7 @@
 // Establish socket.io connection to proxy server
 import io from "socket.io-client"
 import jquery from "jquery"
+import { triggerChangeEvent } from "./event-listeners"
 class ProxyBridge {
   socketUrl = "http://localhost:4001"
   socketConnected = false
@@ -24,9 +25,20 @@ class ProxyBridge {
     const { message: prompt } = payload
     const chatInput = jquery("#chat-input")
     const chatInputElem = chatInput[0]
+    const sendButton = jquery("#send-message-button")
     //
     chatInput.val(prompt)
+
+    // Add event listeners to capture keystrokes and changes on the chat input
+    if (chatInputElem) {
+      //@ts-ignore
+      triggerChangeEvent(chatInputElem)
+      setTimeout(() => {
+        sendButton.trigger("click")
+      }, 512)
+    }
   }
+
   onMessage(data: any) {
     if (!data) return
     const { type, payload, requestId } = data
