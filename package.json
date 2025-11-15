@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build-script-inject": "esbuild src/content/fetch-injector.ts --minify --bundle --outfile=src/content/fetch-injector.js --loader:.js=jsx",
+    "bsi-watch-src": "esbuild src/content/fetch-injector.ts --watch --minify --bundle --outfile=src/content/fetch-injector.js --loader:.js=jsx",
+    "bsi-watch": "esbuild src/content/fetch-injector.ts --watch --minify --bundle --outfile=dist/src/content/fetch-injector.js --loader:.js=jsx",
     "build": "pnpm run build-script-inject && vite build"
   },
   "dependencies": {

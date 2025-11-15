@@ -8,23 +8,24 @@
 // Note: Since this script is injected into the DOM, we need to access io from window
 declare global {
   interface Window {
-    io?: any;
-    fetchInterceptorInjected?: boolean;
+    io?: any
+    fetchInterceptorInjected?: boolean
   }
 }
-import { socket, sendToSocket } from "./socket-client";
+import { bridge } from "./socket-client"
 
 //
 // This code runs in the page context, not the content script context
 if (!(window as any).fetchInterceptorInjected) {
-  console.log("[CRXJS] Fetch interceptor injected into page DOM");
+  console.log("[CRXJS] Fetch interceptor injected into page DOM")
 
   // Store the original fetch function
-  const originalFetch = window.fetch;
+  const originalFetch = window.fetch
 
   // Override the global fetch function
+  //@ts-ignore
   window.fetch = async function (...args: [any, any]) {
-    const [resource, init] = args;
+    const [resource, init] = args
 
     // Log the original request
     console.log("[CRXJS] Intercepted fetch request:", {
@@ -35,7 +36,7 @@ if (!(window as any).fetchInterceptorInjected) {
       method: init?.method || "GET",
       headers: init?.headers,
       body: init?.body,
-    });
+    })
 
     try {
       // Prepare request data to send to socket.io server
@@ -49,37 +50,41 @@ if (!(window as any).fetchInterceptorInjected) {
         method: init?.method || "GET",
         headers: init?.headers,
         body: init?.body,
-      };
+      }
 
       // Send request data to socket.io server
-      sendToSocket(requestData);
+      bridge.sendMessage(requestData)
 
       // You can modify the request here before sending
-      const modifiedResource = resource; // Modify as needed
-      const modifiedInit = { ...init }; // Create a copy to modify
+      const modifiedResource = resource // Modify as needed
+      const modifiedInit = { ...init } // Create a copy to modify
 
       // Example: Add custom headers for private API proxying
       if (modifiedInit.headers) {
         modifiedInit.headers = {
           ...modifiedInit.headers,
           "X-Private-API-Proxy": "browser-extension",
-        };
+        }
       } else {
-        modifiedInit.headers = { "X-Private-API-Proxy": "browser-extension" };
+        modifiedInit.headers = { "X-Private-API-Proxy": "browser-extension" }
       }
 
       // Call the original fetch with potentially modified parameters
+      if (resource.includes("/api/v2/chat/completions")) {
+        console.log(`Received url: ${resource}`)
+        // return
+      }
       const response = await originalFetch.call(
         this,
         modifiedResource,
         modifiedInit
-      );
+      )
 
       // Clone the response to allow reading its body multiple times
-      const responseClone = response.clone();
+      const responseClone = response.clone()
 
       try {
-        const responseBody = await responseClone.text();
+        const responseBody = await responseClone.text()
         console.log("[CRXJS] Fetch response:", {
           url:
             typeof resource === "string"
@@ -89,7 +94,7 @@ if (!(window as any).fetchInterceptorInjected) {
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
           body: responseBody,
-        });
+        })
 
         // Send response data to socket.io server
         const responseData = {
@@ -103,8 +108,8 @@ if (!(window as any).fetchInterceptorInjected) {
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
           body: responseBody,
-        };
-        sendToSocket(responseData);
+        }
+        bridge.sendMessage(responseData)
       } catch (e) {
         // Response might be a stream that can't be cloned, log basic info
         console.log("[CRXJS] Fetch response (stream):", {
@@ -115,7 +120,7 @@ if (!(window as any).fetchInterceptorInjected) {
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
-        });
+        })
 
         // Send response data to socket.io server without body
         const responseData = {
@@ -128,15 +133,15 @@ if (!(window as any).fetchInterceptorInjected) {
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
-        };
-        sendToSocket(responseData);
+        }
+        bridge.sendMessage(responseData)
       }
 
       // You can modify the response before returning it
       // For now, return the original response
-      return response;
+      return response
     } catch (error) {
-      console.error("[CRXJS] Fetch error:", error);
+      console.error("[CRXJS] Fetch error:", error)
 
       // Send error to socket.io server
       const errorData = {
@@ -147,20 +152,17 @@ if (!(window as any).fetchInterceptorInjected) {
             ? resource
             : (resource as any).url || resource,
         error: error instanceof Error ? error.message : String(error),
-      };
-      sendToSocket(errorData);
+      }
+      bridge.sendMessage(errorData)
 
-      throw error; // Re-throw the error to maintain original behavior
+      throw error // Re-throw the error to maintain original behavior
     }
-  };
-
+  }
 
   // Mark as injected to prevent duplicate injection
-  (window as any).fetchInterceptorInjected = true;
+  ;(window as any).fetchInterceptorInjected = true
 
-  console.log(
-    "[CRXJS] Fetch interception enabled via DOM injection"
-  );
+  console.log("[CRXJS] Fetch interception enabled via DOM injection")
 }
 
 // Remove export since this is a script file
