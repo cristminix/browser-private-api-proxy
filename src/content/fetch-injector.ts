@@ -12,6 +12,7 @@ declare global {
     fetchInterceptorInjected?: boolean
   }
 }
+import { delay } from "../utils"
 import { bridge } from "./socket-client"
 
 //
@@ -58,6 +59,7 @@ if (!(window as any).fetchInterceptorInjected) {
         if (resource.includes(watcher.matchSourceUrl)) {
           watcher.setPhase("REQUEST", requestData)
         }
+        await delay(257)
       }
       // You can modify the request here before sending
       const modifiedResource = resource // Modify as needed
@@ -77,6 +79,7 @@ if (!(window as any).fetchInterceptorInjected) {
           watcher.setPhase("HEADERS", modifiedInit.headers)
           console.log(`Received url: ${resource}`)
           // return
+          await delay(257)
         }
       }
 
@@ -89,7 +92,7 @@ if (!(window as any).fetchInterceptorInjected) {
       )
       if (watcher) {
         if (resource.includes(watcher.matchSourceUrl)) {
-          watcher.setPhase("RESPONSE", response)
+          watcher.setPhase("RESPONSE", null)
         }
       }
       // Clone the response to allow reading its body multiple times

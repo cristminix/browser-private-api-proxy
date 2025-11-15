@@ -3,7 +3,7 @@ import io from "socket.io-client"
 import jquery from "jquery"
 import { triggerChangeEvent } from "./event-listeners"
 import * as idb from "idb-keyval"
-import { crc32 } from "../utils"
+import { crc32, delay } from "../utils"
 
 class FetchResponseEventWatcher {
   requsetId: string = ""
@@ -22,15 +22,13 @@ class FetchResponseEventWatcher {
     console.log("CHECKSUM", this.checksum)
   }
   setPhase(phase: string, data: any) {
+    console.log({ data })
     this.phase = phase
-    this.phaseData = data
+    // this.phaseData = data
+    idb.set(`data-${this.checksum}`, data)
   }
-  async delay(timeout: number) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        resolve(true)
-      }, timeout)
-    })
+  async getPhaseData() {
+    return idb.get(`data-${this.checksum}`)
   }
   async watch() {
     this.stopWatcher = false
@@ -40,26 +38,39 @@ class FetchResponseEventWatcher {
         this.stopWatcher = true
       }
     }, this.timeout)
-    while (!this.stopWatcher) {
-      console.log(this.phase, iteration)
-      if (this.phase === "INIT") {
-      } else if (this.phase === "REQUEST") {
-      } else if (this.phase === "HEADERS") {
-      } else if (this.phase === "RESPONSE") {
-        console.log(this.phaseData)
-        this.stopWatcher = true
-      } else if (this.phase === "ERROR") {
-        console.log(this.phaseData)
-        this.stopWatcher = true
-      } else if (this.phase === "DATA") {
-        console.log(this.phaseData)
-        this.stopWatcher = true
+    return new Promise(async (resolve, reject) => {
+      let success = false
+      while (!this.stopWatcher) {
+        console.log(this.phase, iteration)
+        this.phaseData = await this.getPhaseData()
+        if (this.phase === "INIT") {
+        } else if (this.phase === "REQUEST") {
+          // console.log(this.phaseData)
+        } else if (this.phase === "HEADERS") {
+          // console.log(this.phaseData)
+        } else if (this.phase === "RESPONSE") {
+          // console.log(this.phaseData)
+          // this.stopWatcher = true
+        } else if (this.phase === "ERROR") {
+          // console.log(this.phaseData)
+          this.stopWatcher = true
+        } else if (this.phase === "DATA") {
+          success = true
+          // console.log(this.phaseData)
+          this.stopWatcher = true
+        }
+        if (iteration === 500) {
+          break
+        }
+        iteration += 1
+        await delay(256)
       }
-      if (iteration === 1000) {
-        break
+      if (success) {
+        resolve(this.phaseData)
+      } else {
+        reject(null)
       }
-      await this.delay(3000)
-    }
+    })
   }
 }
 
@@ -84,7 +95,11 @@ class ProxyBridge {
   }
   async waitForFetchResponseEvent(matchSourceUrl: string, timeout: number) {
     this.watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout)
-    this.watcher.watch()
+    const data = await this.watcher.watch()
+
+    if (data) {
+      console.log("RECEIVED DATA", data)
+    }
   }
   async onChat(payload: any, requestId: string) {
     // alert(`onChat(${JSON.stringify(payload)},${requestId})`)

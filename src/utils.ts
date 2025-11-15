@@ -136,4 +136,11 @@ const crc32 = (input: string) => {
   return crc32_str(input).toString(16)
 }
 
-export { crc32 }
+async function delay(timeout: number) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve(true)
+    }, timeout)
+  })
+}
+export { crc32, delay }
