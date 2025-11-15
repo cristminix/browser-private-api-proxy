@@ -1,5 +1,6 @@
 // Establish socket.io connection to proxy server
 import io from "socket.io-client"
+import jquery from "jquery"
 class ProxyBridge {
   socketUrl = "http://localhost:4001"
   socketConnected = false
@@ -20,6 +21,11 @@ class ProxyBridge {
   }
   onChat(payload: any, requestId: string) {
     alert(`onChat(${JSON.stringify(payload)},${requestId})`)
+    const { message: prompt } = payload
+    const chatInput = jquery("#chat-input")
+    const chatInputElem = chatInput[0]
+    //
+    chatInput.val(prompt)
   }
   onMessage(data: any) {
     if (!data) return
@@ -47,6 +53,16 @@ class ProxyBridge {
       console.log("HEARTBEAT")
       // this.socketConnected = true
       this.sendHeartBeat()
+    })
+    this.socket.on("chat", (data: any) => {
+      console.log("CHAT")
+
+      if (!data) return
+      const { type, payload, requestId } = data
+
+      this.onChat(payload, requestId)
+      // this.socketConnected = true
+      // this.sendHeartBeat()
     })
     this.socket.on("connect_error", (error: any) => {
       console.error("Failed to connect to Socket.IO server:", error.message)
