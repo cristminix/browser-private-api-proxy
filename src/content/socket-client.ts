@@ -21,8 +21,8 @@ class ProxyBridge {
     this.initSocketCallback()
   }
   onChat(payload: any, requestId: string) {
-    alert(`onChat(${JSON.stringify(payload)},${requestId})`)
-    const { message: prompt } = payload
+    // alert(`onChat(${JSON.stringify(payload)},${requestId})`)
+    const { prompt } = payload
     const chatInput = jquery("#chat-input")
     const chatInputElem = chatInput[0]
     const sendButton = jquery("#send-message-button")
@@ -35,7 +35,7 @@ class ProxyBridge {
       triggerChangeEvent(chatInputElem)
       setTimeout(() => {
         sendButton.trigger("click")
-      }, 512)
+      }, 256)
     }
   }
 
