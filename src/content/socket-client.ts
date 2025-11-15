@@ -99,6 +99,8 @@ class ProxyBridge {
 
     if (data) {
       console.log("RECEIVED DATA", data)
+      bridge.sendMessage(data)
+      this.socket.emit("answer", data)
     }
   }
   async onChat(payload: any, requestId: string) {
