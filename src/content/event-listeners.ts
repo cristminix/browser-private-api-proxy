@@ -4,7 +4,7 @@ export function triggerChangeEvent(chatInputElem: HTMLInputElement) {
   const eventTypes = ["keydown", "keyup", "keypress", "input", "change"]
 
   eventTypes.forEach((eventType) => {
-    let event: Event;
+    let event: Event
 
     if (["keydown", "keyup", "keypress"].includes(eventType)) {
       // Create keyboard events with some default properties
@@ -16,20 +16,20 @@ export function triggerChangeEvent(chatInputElem: HTMLInputElement) {
         ctrlKey: false,
         shiftKey: false,
         altKey: false,
-        metaKey: false
-      });
+        metaKey: false,
+      })
     } else {
       // Create input and change events
       event = new Event(eventType, {
         bubbles: true,
-        cancelable: true
-      });
+        cancelable: true,
+      })
     }
 
     // Dispatch the event on the element
-    chatInputElem.dispatchEvent(event);
-    console.log(`"${eventType}" event triggered on chat input element`);
-  });
+    chatInputElem.dispatchEvent(event)
+    // console.log(`"${eventType}" event triggered on chat input element`);
+  })
 
-  console.log("All events have been triggered on the chat input element");
+  // console.log("All events have been triggered on the chat input element");
 }

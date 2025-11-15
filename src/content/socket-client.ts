@@ -2,6 +2,67 @@
 import io from "socket.io-client"
 import jquery from "jquery"
 import { triggerChangeEvent } from "./event-listeners"
+import * as idb from "idb-keyval"
+import { crc32 } from "../utils"
+
+class FetchResponseEventWatcher {
+  requsetId: string = ""
+  matchSourceUrl: string = ""
+  timeout: number = 6000
+  phase: string = "INIT"
+  checksum: string = ""
+  phaseData: any = null
+  stopWatcher = false
+
+  constructor(matchSourceUrl: string, timeout: number) {
+    this.matchSourceUrl = matchSourceUrl
+    this.timeout = timeout
+    this.checksum = crc32(matchSourceUrl)
+
+    console.log("CHECKSUM", this.checksum)
+  }
+  setPhase(phase: string, data: any) {
+    this.phase = phase
+    this.phaseData = data
+  }
+  async delay(timeout: number) {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        resolve(true)
+      }, timeout)
+    })
+  }
+  async watch() {
+    this.stopWatcher = false
+    let iteration = 0
+    setTimeout(() => {
+      if (this.phase === "INIT") {
+        this.stopWatcher = true
+      }
+    }, this.timeout)
+    while (!this.stopWatcher) {
+      console.log(this.phase, iteration)
+      if (this.phase === "INIT") {
+      } else if (this.phase === "REQUEST") {
+      } else if (this.phase === "HEADERS") {
+      } else if (this.phase === "RESPONSE") {
+        console.log(this.phaseData)
+        this.stopWatcher = true
+      } else if (this.phase === "ERROR") {
+        console.log(this.phaseData)
+        this.stopWatcher = true
+      } else if (this.phase === "DATA") {
+        console.log(this.phaseData)
+        this.stopWatcher = true
+      }
+      if (iteration === 1000) {
+        break
+      }
+      await this.delay(3000)
+    }
+  }
+}
+
 class ProxyBridge {
   socketUrl = "http://localhost:4001"
   socketConnected = false
@@ -10,6 +71,7 @@ class ProxyBridge {
   socketTimeout = 5000
   socketExitTimeout = 6000
   appName = "zai-proxy"
+  watcher: any = null
   constructor() {
     this.socket = io(this.socketUrl, {
       // Disable automatic reconnection to allow the program to exit when server is not available
@@ -20,7 +82,11 @@ class ProxyBridge {
     })
     this.initSocketCallback()
   }
-  onChat(payload: any, requestId: string) {
+  async waitForFetchResponseEvent(matchSourceUrl: string, timeout: number) {
+    this.watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout)
+    this.watcher.watch()
+  }
+  async onChat(payload: any, requestId: string) {
     // alert(`onChat(${JSON.stringify(payload)},${requestId})`)
     const { prompt } = payload
     const chatInput = jquery("#chat-input")
@@ -37,6 +103,7 @@ class ProxyBridge {
         sendButton.trigger("click")
       }, 256)
     }
+    await this.waitForFetchResponseEvent("/api/v2/chat/completions", 6000)
   }
 
   onMessage(data: any) {

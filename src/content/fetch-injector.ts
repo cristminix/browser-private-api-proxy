@@ -26,7 +26,7 @@ if (!(window as any).fetchInterceptorInjected) {
   //@ts-ignore
   window.fetch = async function (...args: [any, any]) {
     const [resource, init] = args
-
+    const { watcher } = bridge
     // Log the original request
     console.log("[CRXJS] Intercepted fetch request:", {
       url:
@@ -53,8 +53,12 @@ if (!(window as any).fetchInterceptorInjected) {
       }
 
       // Send request data to socket.io server
-      bridge.sendMessage(requestData)
-
+      // bridge.sendMessage(requestData)
+      if (watcher) {
+        if (resource.includes(watcher.matchSourceUrl)) {
+          watcher.setPhase("REQUEST", requestData)
+        }
+      }
       // You can modify the request here before sending
       const modifiedResource = resource // Modify as needed
       const modifiedInit = { ...init } // Create a copy to modify
@@ -68,18 +72,26 @@ if (!(window as any).fetchInterceptorInjected) {
       } else {
         modifiedInit.headers = { "X-Private-API-Proxy": "browser-extension" }
       }
+      if (watcher) {
+        if (resource.includes(watcher.matchSourceUrl)) {
+          watcher.setPhase("HEADERS", modifiedInit.headers)
+          console.log(`Received url: ${resource}`)
+          // return
+        }
+      }
 
       // Call the original fetch with potentially modified parameters
-      if (resource.includes("/api/v2/chat/completions")) {
-        console.log(`Received url: ${resource}`)
-        // return
-      }
+
       const response = await originalFetch.call(
         this,
         modifiedResource,
         modifiedInit
       )
-
+      if (watcher) {
+        if (resource.includes(watcher.matchSourceUrl)) {
+          watcher.setPhase("RESPONSE", response)
+        }
+      }
       // Clone the response to allow reading its body multiple times
       const responseClone = response.clone()
 
@@ -109,7 +121,12 @@ if (!(window as any).fetchInterceptorInjected) {
           headers: Object.fromEntries(response.headers.entries()),
           body: responseBody,
         }
-        bridge.sendMessage(responseData)
+        // bridge.sendMessage(responseData)
+        if (watcher) {
+          if (resource.includes(watcher.matchSourceUrl)) {
+            watcher.setPhase("DATA", responseData)
+          }
+        }
       } catch (e) {
         // Response might be a stream that can't be cloned, log basic info
         console.log("[CRXJS] Fetch response (stream):", {
@@ -134,7 +151,12 @@ if (!(window as any).fetchInterceptorInjected) {
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
         }
-        bridge.sendMessage(responseData)
+        // bridge.sendMessage(responseData)
+        if (watcher) {
+          if (resource.includes(watcher.matchSourceUrl)) {
+            watcher.setPhase("DATA", responseData)
+          }
+        }
       }
 
       // You can modify the response before returning it
@@ -153,7 +175,12 @@ if (!(window as any).fetchInterceptorInjected) {
             : (resource as any).url || resource,
         error: error instanceof Error ? error.message : String(error),
       }
-      bridge.sendMessage(errorData)
+      // bridge.sendMessage(errorData)
+      if (watcher) {
+        if (resource.includes(watcher.matchSourceUrl)) {
+          watcher.setPhase("ERROR", errorData)
+        }
+      }
 
       throw error // Re-throw the error to maintain original behavior
     }

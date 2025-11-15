@@ -11,6 +11,7 @@
     "build": "pnpm run build-script-inject && vite build"
   },
   "dependencies": {
+    "idb-keyval": "^6.2.2",
     "jquery": "^3.7.1",
     "socket.io-client": "^4.8.1",
     "svelte": "^5.36.12"
