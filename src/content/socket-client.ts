@@ -151,6 +151,9 @@ class ProxyBridge {
       // this.socketConnected = true
       this.sendHeartBeat()
     })
+    this.socket.on("new-chat", (data: any) => {
+      jquery("#sidebar-new-chat-button").trigger("click")
+    })
     this.socket.on("chat-reload", (data: any) => {
       jquery("#sidebar-new-chat-button").trigger("click")
       setTimeout(() => {
@@ -158,13 +161,19 @@ class ProxyBridge {
         window.history.back()
       }, 3000)
     })
-    this.socket.on("chat", (data: any) => {
+    this.socket.on("chat", async (data: any) => {
       console.log("CHAT")
+      jquery("#sidebar-new-chat-button").trigger("click")
+      await delay(1000)
 
       if (!data) return
       const { type, payload, requestId } = data
+      // const { thinkEnabled } = payload
+      // if (!thinkEnabled) jquery("button[data-autothink]").trigger("click")
 
+      await delay(1000)
       this.onChat(payload, requestId)
+
       // this.socketConnected = true
       // this.sendHeartBeat()
     })
