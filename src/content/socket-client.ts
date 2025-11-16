@@ -151,6 +151,13 @@ class ProxyBridge {
       // this.socketConnected = true
       this.sendHeartBeat()
     })
+    this.socket.on("chat-reload", (data: any) => {
+      jquery("#sidebar-new-chat-button").trigger("click")
+      setTimeout(() => {
+        // document.location.reload()
+        window.history.back()
+      }, 3000)
+    })
     this.socket.on("chat", (data: any) => {
       console.log("CHAT")
 
