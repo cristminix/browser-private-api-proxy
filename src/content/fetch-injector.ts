@@ -13,6 +13,7 @@ declare global {
   }
 }
 import { delay } from "../utils"
+import { createFakeFetchResponse } from "./fetch-utils"
 import { bridge } from "./socket-client"
 
 //
@@ -28,29 +29,19 @@ if (!(window as any).fetchInterceptorInjected) {
   window.fetch = async function (...args: [any, any]) {
     const [resource, init] = args
     const { watcher } = bridge
-    // Log the original request
-    console.log("[CRXJS] Intercepted fetch request:", {
-      url:
-        typeof resource === "string"
-          ? resource
-          : (resource as any).url || resource,
+    const options = {
+      url: typeof resource === "string" ? resource : (resource as any).url || resource,
       method: init?.method || "GET",
       headers: init?.headers,
       body: init?.body,
-    })
+    }
 
     try {
       // Prepare request data to send to socket.io server
       const requestData = {
         type: "fetch_request",
         timestamp: Date.now(),
-        url:
-          typeof resource === "string"
-            ? resource
-            : (resource as any).url || resource,
-        method: init?.method || "GET",
-        headers: init?.headers,
-        body: init?.body,
+        ...options,
       }
 
       // Send request data to socket.io server
@@ -61,38 +52,30 @@ if (!(window as any).fetchInterceptorInjected) {
         }
         await delay(257)
       }
-      // You can modify the request here before sending
-      const modifiedResource = resource // Modify as needed
-      const modifiedInit = { ...init } // Create a copy to modify
 
-      // Example: Add custom headers for private API proxying
-      if (modifiedInit.headers) {
-        modifiedInit.headers = {
-          ...modifiedInit.headers,
-          "X-Private-API-Proxy": "browser-extension",
-        }
-      } else {
-        modifiedInit.headers = { "X-Private-API-Proxy": "browser-extension" }
-      }
       if (watcher) {
         if (resource.includes(watcher.matchSourceUrl)) {
-          watcher.setPhase("HEADERS", modifiedInit.headers)
-          console.log(`Received url: ${resource}`)
+          watcher.setPhase("HEADERS", options.headers)
+          // console.log(`Received url: ${resource}`)
           // return
           await delay(257)
         }
       }
+      if (watcher) {
+        if (resource.includes(watcher.matchSourceUrl)) {
+          watcher.setPhase("FETCH", options)
+          await delay(257)
 
+          return createFakeFetchResponse(resource)
+        }
+      }
       // Call the original fetch with potentially modified parameters
 
-      const response = await originalFetch.call(
-        this,
-        modifiedResource,
-        modifiedInit
-      )
+      const response = await originalFetch.call(this, resource, options)
       if (watcher) {
         if (resource.includes(watcher.matchSourceUrl)) {
           watcher.setPhase("RESPONSE", null)
+          await delay(257)
         }
       }
       // Clone the response to allow reading its body multiple times
@@ -101,10 +84,7 @@ if (!(window as any).fetchInterceptorInjected) {
       try {
         const responseBody = await responseClone.text()
         console.log("[CRXJS] Fetch response:", {
-          url:
-            typeof resource === "string"
-              ? resource
-              : (resource as any).url || resource,
+          url: typeof resource === "string" ? resource : (resource as any).url || resource,
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
@@ -115,10 +95,7 @@ if (!(window as any).fetchInterceptorInjected) {
         const responseData = {
           type: "fetch_response",
           timestamp: Date.now(),
-          url:
-            typeof resource === "string"
-              ? resource
-              : (resource as any).url || resource,
+          url: typeof resource === "string" ? resource : (resource as any).url || resource,
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
@@ -133,10 +110,7 @@ if (!(window as any).fetchInterceptorInjected) {
       } catch (e) {
         // Response might be a stream that can't be cloned, log basic info
         console.log("[CRXJS] Fetch response (stream):", {
-          url:
-            typeof resource === "string"
-              ? resource
-              : (resource as any).url || resource,
+          url: typeof resource === "string" ? resource : (resource as any).url || resource,
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
@@ -146,10 +120,7 @@ if (!(window as any).fetchInterceptorInjected) {
         const responseData = {
           type: "fetch_response",
           timestamp: Date.now(),
-          url:
-            typeof resource === "string"
-              ? resource
-              : (resource as any).url || resource,
+          url: typeof resource === "string" ? resource : (resource as any).url || resource,
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
@@ -172,10 +143,7 @@ if (!(window as any).fetchInterceptorInjected) {
       const errorData = {
         type: "fetch_error",
         timestamp: Date.now(),
-        url:
-          typeof resource === "string"
-            ? resource
-            : (resource as any).url || resource,
+        url: typeof resource === "string" ? resource : (resource as any).url || resource,
         error: error instanceof Error ? error.message : String(error),
       }
       // bridge.sendMessage(errorData)

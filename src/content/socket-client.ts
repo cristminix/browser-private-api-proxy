@@ -43,6 +43,7 @@ class FetchResponseEventWatcher {
       while (!this.stopWatcher) {
         console.log(this.phase, iteration)
         this.phaseData = await this.getPhaseData()
+        this.phaseData.phase = this.phase
         if (this.phase === "INIT") {
         } else if (this.phase === "REQUEST") {
           // console.log(this.phaseData)
@@ -54,7 +55,7 @@ class FetchResponseEventWatcher {
         } else if (this.phase === "ERROR") {
           // console.log(this.phaseData)
           this.stopWatcher = true
-        } else if (this.phase === "DATA") {
+        } else if (this.phase === "DATA" || this.phase === "FETCH") {
           success = true
           // console.log(this.phaseData)
           this.stopWatcher = true
