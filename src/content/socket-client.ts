@@ -163,8 +163,8 @@ class ProxyBridge {
     })
     this.socket.on("chat", async (data: any) => {
       console.log("CHAT")
-      jquery("#sidebar-new-chat-button").trigger("click")
-      await delay(1000)
+      // jquery("#sidebar-new-chat-button").trigger("click")
+      // await delay(1000)
 
       if (!data) return
       const { type, payload, requestId } = data

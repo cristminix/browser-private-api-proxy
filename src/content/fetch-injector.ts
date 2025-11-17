@@ -10,13 +10,15 @@ declare global {
   interface Window {
     io?: any
     fetchInterceptorInjected?: boolean
+    jquery?: any
   }
 }
 import { delay } from "../utils"
 import { createFakeFetchResponse } from "./fetch-utils"
 import { bridge } from "./socket-client"
+import jquery from "jquery"
 
-//
+window.jquery = jquery
 // This code runs in the page context, not the content script context
 if (!(window as any).fetchInterceptorInjected) {
   console.log("[CRXJS] Fetch interceptor injected into page DOM")
@@ -66,7 +68,8 @@ if (!(window as any).fetchInterceptorInjected) {
           watcher.setPhase("FETCH", options)
           await delay(257)
 
-          return createFakeFetchResponse(resource)
+          // return createFakeFetchResponse(resource)
+          return await originalFetch.call(this, "http://localhost:4001/api/fake-stream-chat")
         }
       }
       // Call the original fetch with potentially modified parameters
