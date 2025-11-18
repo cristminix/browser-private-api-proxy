@@ -50,7 +50,7 @@ class EventEmitter {
 const fetchEventBus = new EventEmitter()
 
 class FetchResponseEventWatcher {
-  private requestId: string = ""
+  private requestId: string = "x"
   private matchSourceUrl: string = ""
   private timeout: number = 6000
   private phase: FetchPhase = "INIT"
@@ -59,25 +59,28 @@ class FetchResponseEventWatcher {
   private timeoutId: NodeJS.Timeout | null = null
   private eventListener: Function | null = null
 
-  constructor(matchSourceUrl: string, timeout: number) {
+  constructor(matchSourceUrl: string, timeout: number, requestId: string) {
     this.matchSourceUrl = matchSourceUrl
     this.timeout = timeout
     this.checksum = crc32(matchSourceUrl)
+    this.requestId = requestId
 
     console.log("CHECKSUM", this.checksum)
   }
-
+  getPhaseKey() {
+    return `data-${this.requestId}-${this.checksum}`
+  }
   setPhase(phase: FetchPhase, data: any): void {
     console.log({ data })
     this.phase = phase
-    idb.set(`data-${this.checksum}`, data)
+    idb.set(this.getPhaseKey(), data)
 
     // Emit event to notify subscribers
-    fetchEventBus.emit(`phase:${this.checksum}`, { phase, data })
+    fetchEventBus.emit(`phase:${this.getPhaseKey()}`, { phase, data })
   }
 
   async getPhaseData(): Promise<FetchPhaseData | undefined> {
-    return idb.get(`data-${this.checksum}`)
+    return idb.get(this.getPhaseKey())
   }
 
   async watch(): Promise<FetchPhaseData> {
@@ -85,7 +88,7 @@ class FetchResponseEventWatcher {
       // Set up timeout
       this.timeoutId = setTimeout(() => {
         if (this.phase === "INIT") {
-          fetchEventBus.off(`phase:${this.checksum}`, this.eventListener!)
+          fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener!)
           reject(new Error(`Timeout waiting for fetch response from ${this.matchSourceUrl}`))
         }
       }, this.timeout)
@@ -101,13 +104,13 @@ class FetchResponseEventWatcher {
         switch (phase) {
           case "ERROR":
             if (this.timeoutId) clearTimeout(this.timeoutId)
-            fetchEventBus.off(`phase:${this.checksum}`, this.eventListener!)
+            fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener!)
             reject(new Error(`Error in fetch response: ${JSON.stringify(data)}`))
             break
           case "DATA":
           case "FETCH":
             if (this.timeoutId) clearTimeout(this.timeoutId)
-            fetchEventBus.off(`phase:${this.checksum}`, this.eventListener!)
+            fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener!)
             if (this.phaseData) {
               resolve(this.phaseData)
             } else {
@@ -122,7 +125,7 @@ class FetchResponseEventWatcher {
       }
 
       // Register the event listener
-      fetchEventBus.on(`phase:${this.checksum}`, this.eventListener)
+      fetchEventBus.on(`phase:${this.getPhaseKey()}`, this.eventListener)
 
       // Check if there's already data in IndexedDB
       this.getPhaseData().then((existingData) => {

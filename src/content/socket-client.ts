@@ -33,7 +33,7 @@ class ProxyBridge {
     console.log("APP_NAME", this.appName)
     this.initSocketCallback()
   }
-  async waitForFetchResponseEvent(matchSourceUrl: string, timeout: number) {
+  async waitForFetchResponseEvent(matchSourceUrl: string, timeout: number, requestId: string) {
     try {
       // Validate input parameters
       if (!matchSourceUrl || typeof matchSourceUrl !== "string") {
@@ -48,14 +48,14 @@ class ProxyBridge {
       console.log(`Starting to wait for fetch response event from ${matchSourceUrl} with timeout ${timeout}ms`)
 
       // Create a new watcher instance
-      this.watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout)
+      this.watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout, requestId)
 
       // Wait for the watcher to complete
       const data = await this.watcher.watch()
 
       if (data) {
         console.log("RECEIVED DATA", data)
-        bridge.sendMessage(data)
+        // bridge.sendMessage(data)
         this.socket.emit("answer", data)
       } else {
         console.warn(`No data received for ${matchSourceUrl} within timeout period`)
@@ -80,11 +80,10 @@ class ProxyBridge {
     if (chatInputElem) {
       //@ts-ignore
       triggerChangeEvent(chatInputElem)
-      setTimeout(() => {
-        sendButton.trigger("click")
-      }, 256)
+      await delay(256)
+      sendButton.trigger("click")
+      await this.waitForFetchResponseEvent("/api/v2/chat/completions", 6000, requestId)
     }
-    await this.waitForFetchResponseEvent("/api/v2/chat/completions", 6000)
   }
 
   onMessage(data: any) {
