@@ -5,11 +5,12 @@ import { triggerChangeEvent } from "./event-listeners"
 
 import { delay } from "../utils"
 import { FetchResponseEventWatcher } from "./fetch-response-watcher"
+import { Socket } from "socket.io-client"
 
 class ProxyBridge {
   socketUrl = "http://localhost:4001"
   socketConnected = false
-  socket: any = null
+  socket: Socket | null = null
   socketLastError: any = null
   socketTimeout = 5000
   socketExitTimeout = 6000
@@ -24,14 +25,21 @@ class ProxyBridge {
       transports: ["websocket"], // Use only websocket transport
     })
 
-    if (document.location.href.match(/z\.ai/)) {
-      this.appName = "zai-proxy"
-    }
-    if (document.location.href.match(/learning\.oreilly\.com/)) {
-      this.appName = "oreally-proxy"
-    }
+    this.appName = this.determineAppName()
     console.log("APP_NAME", this.appName)
     this.initSocketCallback()
+  }
+  private determineAppName(): string {
+    const hostname = window.location.hostname
+
+    if (hostname.includes("z.ai")) {
+      return "zai-proxy"
+    }
+    if (hostname.includes("learning.oreilly.com")) {
+      return "oreally-proxy"
+    }
+
+    return "generic-proxy"
   }
   async waitForFetchResponseEvent(matchSourceUrl: string, timeout: number, requestId: string) {
     try {
@@ -56,7 +64,9 @@ class ProxyBridge {
       if (data) {
         console.log("RECEIVED DATA", data)
         // bridge.sendMessage(data)
-        this.socket.emit("answer", data)
+        if (this.socket) {
+          this.socket.emit("answer", data)
+        }
       } else {
         console.warn(`No data received for ${matchSourceUrl} within timeout period`)
       }
@@ -97,9 +107,13 @@ class ProxyBridge {
     console.log("Received message from server:", data)
   }
   sendHeartBeat() {
-    this.socket.emit("heartbeat", { appName: this.appName })
+    if (this.socket) {
+      this.socket.emit("heartbeat", { appName: this.appName })
+    }
   }
   initSocketCallback() {
+    if (!this.socket) return
+
     this.socket.on("connect", () => {
       console.log("CONNECTED")
       this.socketConnected = true
@@ -168,13 +182,20 @@ class ProxyBridge {
     })
   }
   sendMessage(message: any) {
-    this.socket.emit("message", message)
+    if (this.socket) {
+      this.socket.emit("message", message)
+    }
   }
   async sendMessageAsync(message: unknown): Promise<unknown> {
     return new Promise((resolve, reject) => {
+      if (!this.socket) {
+        reject(new Error("Socket is not initialized"))
+        return
+      }
+
       // Timeout yang akan dibersihkan
       const timeoutId = setTimeout(() => {
-        this.socket.off("message", messageHandler)
+        if (this.socket) this.socket.off("message", messageHandler)
         reject(new Error("Socket message timeout after 6000ms"))
       }, 6000)
 
