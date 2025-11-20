@@ -1,13 +1,14 @@
 // Establish socket.io connection to proxy server
 import io from "socket.io-client"
 import jquery from "jquery"
-import { triggerChangeEvent } from "./event-listeners"
+import { triggerChangeEvent } from "../fn/triggerInputElChangeEvent"
 
-import { delay } from "../utils"
-import { FetchResponseEventWatcher } from "./fetch-response-watcher"
+import { delay } from "../../utils"
 import { Socket } from "socket.io-client"
 import * as idb from "idb-keyval"
-class ProxyBridge {
+import { FetchResponseEventWatcher } from "./FetchResponseEventWatcher"
+
+export class ProxyBridge {
   socketUrl = "http://localhost:4001"
   socketConnected = false
   socket: Socket | null = null
@@ -66,6 +67,7 @@ class ProxyBridge {
         // bridge.sendMessage(data)
         if (this.socket) {
           this.socket.emit("answer", data)
+          this.watcher = null
         }
       } else {
         console.warn(`No data received for ${matchSourceUrl} within timeout period`)
@@ -218,7 +220,3 @@ class ProxyBridge {
     })
   }
 }
-
-const bridge = new ProxyBridge()
-
-export { bridge }

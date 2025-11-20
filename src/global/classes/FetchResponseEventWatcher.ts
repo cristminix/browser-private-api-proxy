@@ -1,55 +1,19 @@
 import * as idb from "idb-keyval"
-import { crc32 } from "../utils"
+import { crc32 } from "../../utils"
+import { EventEmitter } from "./EventEmitter"
 
 // Define types for better type safety
-type FetchPhase = "INIT" | "REQUEST" | "HEADERS" | "RESPONSE" | "ERROR" | "DATA" | "FETCH"
+export type FetchPhase = "INIT" | "REQUEST" | "HEADERS" | "RESPONSE" | "ERROR" | "DATA" | "FETCH"
 
-interface FetchPhaseData {
+export interface FetchPhaseData {
   phase?: FetchPhase
   [key: string]: any
-}
-
-// Simple EventEmitter implementation
-class EventEmitter {
-  private events: { [key: string]: Function[] } = {}
-
-  on(event: string, listener: Function): void {
-    if (!this.events[event]) {
-      this.events[event] = []
-    }
-    this.events[event].push(listener)
-  }
-
-  off(event: string, listener: Function): void {
-    if (!this.events[event]) return
-
-    const index = this.events[event].indexOf(listener)
-    if (index >= 0) {
-      this.events[event].splice(index, 1)
-    }
-  }
-
-  emit(event: string, ...args: any[]): void {
-    if (!this.events[event]) return
-
-    this.events[event].forEach((listener) => {
-      listener(...args)
-    })
-  }
-
-  once(event: string, listener: Function): void {
-    const onceWrapper = (...args: any[]) => {
-      this.off(event, onceWrapper)
-      listener(...args)
-    }
-    this.on(event, onceWrapper)
-  }
 }
 
 // Global event bus for fetch events
 const fetchEventBus = new EventEmitter()
 
-class FetchResponseEventWatcher {
+export class FetchResponseEventWatcher {
   private requestId: string = "x"
   public matchSourceUrl: string = ""
   private timeout: number = 6000
@@ -151,5 +115,4 @@ class FetchResponseEventWatcher {
   }
 }
 
-export { FetchResponseEventWatcher, fetchEventBus }
-export type { FetchPhase, FetchPhaseData }
+export { fetchEventBus }

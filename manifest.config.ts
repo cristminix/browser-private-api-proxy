@@ -1,5 +1,5 @@
-import { defineManifest } from "@crxjs/vite-plugin";
-import pkg from "./package.json";
+import { defineManifest } from "@crxjs/vite-plugin"
+import pkg from "./package.json"
 
 export default defineManifest({
   manifest_version: 3,
@@ -17,25 +17,17 @@ export default defineManifest({
   content_scripts: [
     {
       js: ["src/content/main.ts"],
-      matches: [
-        "https://learning.oreilly.com/*",
-        "https://www.oreilly.com/*",
-        "https://chat.z.ai/*",
-      ],
+      matches: ["https://learning.oreilly.com/*", "https://www.oreilly.com/*", "https://chat.z.ai/*"],
     },
   ],
   web_accessible_resources: [
     {
-      resources: ["src/content/fetch-injector.js"],
-      matches: [
-        "https://learning.oreilly.com/*",
-        "https://www.oreilly.com/*",
-        "https://chat.z.ai/*",
-      ],
+      resources: ["src/content/dist/fetch-injector.js"],
+      matches: ["https://learning.oreilly.com/*", "https://www.oreilly.com/*", "https://chat.z.ai/*"],
     },
   ],
   permissions: ["sidePanel", "contentSettings"],
   side_panel: {
     default_path: "src/sidepanel/index.html",
   },
-});
+})
