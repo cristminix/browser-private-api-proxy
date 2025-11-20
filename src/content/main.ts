@@ -2,7 +2,7 @@
 try {
   // Create a script element that references the web accessible resource
   const script = document.createElement("script")
-  script.src = chrome.runtime.getURL("src/content/fetch-injector.js")
+  script.src = chrome.runtime.getURL("src/content/dist/fetch-injector.js")
 
   // Add to the page
   ;(document.head || document.documentElement).appendChild(script)

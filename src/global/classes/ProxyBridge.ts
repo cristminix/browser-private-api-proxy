@@ -7,6 +7,10 @@ import { delay } from "../../utils"
 import { Socket } from "socket.io-client"
 import * as idb from "idb-keyval"
 import { FetchResponseEventWatcher } from "./FetchResponseEventWatcher"
+import { Mutex } from "./Mutex"
+
+// Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
+const triggerMutex = new Mutex()
 
 export class ProxyBridge {
   socketUrl = "http://localhost:4001"
@@ -154,7 +158,12 @@ export class ProxyBridge {
       const { type, payload, requestId } = data
       // const { thinkEnabled } = payload
       // if (!thinkEnabled) jquery("button[data-autothink]").trigger("click")
-      await idb.set("x-trigger-web-ext", true)
+
+      // Gunakan mutex untuk melindungi akses ke "x-trigger-web-ext"
+      await triggerMutex.withLock(async () => {
+        await idb.set("x-trigger-web-ext", true)
+      })
+
       await delay(1000)
       this.onChat(payload, requestId)
 

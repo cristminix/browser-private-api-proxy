@@ -1,6 +1,11 @@
 import type { ProxyBridge } from "@/global/classes/ProxyBridge"
+import { Mutex } from "../../global/classes/Mutex"
 import { delay } from "../../utils"
 import * as idb from "idb-keyval"
+
+// Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
+const triggerMutex = new Mutex()
+
 export async function interceptZaiFetchCall(bridge: ProxyBridge) {
   // Store the original fetch function
   const originalFetch = window.fetch
@@ -46,13 +51,17 @@ export async function interceptZaiFetchCall(bridge: ProxyBridge) {
         if (url.includes(watcher.matchSourceUrl)) {
           watcher.setPhase("FETCH", options)
           await delay(257)
-          const triggeredFromX = await idb.get("x-trigger-web-ext")
-          if (triggeredFromX) {
-            await idb.set("x-trigger-web-ext", false)
-            return await originalFetch.call(this, "http://localhost:4001/api/fake-stream-chat")
-          } else {
-            return originalFetch.call(this, url, options)
-          }
+
+          // Gunakan mutex untuk melindungi akses ke "x-trigger-web-ext"
+          return await triggerMutex.withLock(async () => {
+            const triggeredFromX = await idb.get("x-trigger-web-ext")
+            if (triggeredFromX) {
+              await idb.set("x-trigger-web-ext", false)
+              return await originalFetch.call(this, "http://localhost:4001/api/fake-stream-chat")
+            } else {
+              return originalFetch.call(this, url, options)
+            }
+          })
           // return createFakeFetchResponse(resource)
         }
       }
