@@ -51,7 +51,7 @@ const fetchEventBus = new EventEmitter()
 
 class FetchResponseEventWatcher {
   private requestId: string = "x"
-  private matchSourceUrl: string = ""
+  public matchSourceUrl: string = ""
   private timeout: number = 6000
   private phase: FetchPhase = "INIT"
   private checksum: string = ""

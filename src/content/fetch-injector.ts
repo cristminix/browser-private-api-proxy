@@ -45,11 +45,13 @@ if (!(window as any).fetchInterceptorInjected) {
         timestamp: Date.now(),
         ...options,
       }
-      const triggeredFromX = await idb.get("x-trigger-web-ext")
-      if (triggeredFromX) {
-        await idb.set("x-trigger-web-ext", false)
-      } else {
-        return originalFetch.call(this, resource, options)
+      if (watcher) {
+        const triggeredFromX = await idb.get("x-trigger-web-ext")
+        if (triggeredFromX) {
+          await idb.set("x-trigger-web-ext", false)
+        } else {
+          return originalFetch.call(this, resource, options)
+        }
       }
 
       // Send request data to socket.io server

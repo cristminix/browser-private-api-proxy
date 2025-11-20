@@ -15,7 +15,7 @@ class ProxyBridge {
   socketTimeout = 5000
   socketExitTimeout = 6000
   appName = "generic-proxy"
-  watcher: any = null
+  watcher: FetchResponseEventWatcher | null = null
   constructor() {
     this.socket = io(this.socketUrl, {
       // Disable automatic reconnection to allow the program to exit when server is not available
