@@ -61,7 +61,7 @@ export class ProxyBridge {
       console.log(`Starting to wait for fetch response event from ${matchSourceUrl} with timeout ${timeout}ms`)
 
       // Create a new watcher instance
-      this.watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout, requestId)
+      this.watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout, requestId, "http://localhost:4001/api/fake-stream-chat")
 
       // Wait for the watcher to complete
       const data = await this.watcher.watch()

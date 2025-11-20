@@ -16,6 +16,7 @@ const fetchEventBus = new EventEmitter()
 export class FetchResponseEventWatcher {
   private requestId: string = "x"
   public matchSourceUrl: string = ""
+  public replaceUrl: string = ""
   private timeout: number = 6000
   private phase: FetchPhase = "INIT"
   private checksum: string = ""
@@ -23,11 +24,12 @@ export class FetchResponseEventWatcher {
   private timeoutId: NodeJS.Timeout | null = null
   private eventListener: Function | null = null
 
-  constructor(matchSourceUrl: string, timeout: number, requestId: string) {
+  constructor(matchSourceUrl: string, timeout: number, requestId: string, replaceUrl: string) {
     this.matchSourceUrl = matchSourceUrl
     this.timeout = timeout
     this.checksum = crc32(matchSourceUrl)
     this.requestId = requestId
+    this.replaceUrl = replaceUrl
 
     console.log("CHECKSUM", this.checksum)
   }

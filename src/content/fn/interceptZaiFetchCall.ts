@@ -58,18 +58,17 @@ export async function interceptZaiFetchCall(bridge: ProxyBridge) {
           const triggeredFromX = await idb.get("x-trigger-web-ext")
           if (triggeredFromX) {
             await idb.set("x-trigger-web-ext", false)
-            // Mengembalikan fetch palsu jika di-trigger dari ekstensi
-            return true
+            // Jangan panggil fetch asli jika di-trigger dari ekstensi
+            return false
           }
           return true // Lanjut dengan fetch asli
         })
       }
 
-      // Panggil fetch asli jika tidak diintercept
-      if (!shouldCallOriginalFetch) {
-        if (watcher && url.includes(watcher.matchSourceUrl)) {
-          return await originalFetch.call(this, "http://localhost:4001/api/fake-stream-chat")
-        }
+      // Panggil fetch palsu jika tidak diintercept
+      if (!shouldCallOriginalFetch && watcher) {
+        // Gunakan URL palsu untuk semua URL, bukan hanya yang cocok dengan watcher
+        if (watcher.replaceUrl.trim().length > 0) return await originalFetch.call(this, watcher.replaceUrl)
       }
 
       const response = await originalFetch.call(this, url, options)
