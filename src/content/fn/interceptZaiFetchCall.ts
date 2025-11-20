@@ -47,25 +47,30 @@ export async function interceptZaiFetchCall(bridge: ProxyBridge) {
           await delay(257)
         }
       }
-      if (watcher) {
-        if (url.includes(watcher.matchSourceUrl)) {
-          watcher.setPhase("FETCH", options)
-          await delay(257)
 
-          // Gunakan mutex untuk melindungi akses ke "x-trigger-web-ext"
-          return await triggerMutex.withLock(async () => {
-            const triggeredFromX = await idb.get("x-trigger-web-ext")
-            if (triggeredFromX) {
-              await idb.set("x-trigger-web-ext", false)
-              return await originalFetch.call(this, "http://localhost:4001/api/fake-stream-chat")
-            } else {
-              return originalFetch.call(this, url, options)
-            }
-          })
-          // return createFakeFetchResponse(resource)
+      // Gunakan mutex untuk melindungi akses ke "x-trigger-web-ext"
+      let shouldCallOriginalFetch = true
+      if (watcher && url.includes(watcher.matchSourceUrl)) {
+        watcher.setPhase("FETCH", options)
+        await delay(257)
+
+        shouldCallOriginalFetch = await triggerMutex.withLock(async () => {
+          const triggeredFromX = await idb.get("x-trigger-web-ext")
+          if (triggeredFromX) {
+            await idb.set("x-trigger-web-ext", false)
+            // Mengembalikan fetch palsu jika di-trigger dari ekstensi
+            return true
+          }
+          return true // Lanjut dengan fetch asli
+        })
+      }
+
+      // Panggil fetch asli jika tidak diintercept
+      if (!shouldCallOriginalFetch) {
+        if (watcher && url.includes(watcher.matchSourceUrl)) {
+          return await originalFetch.call(this, "http://localhost:4001/api/fake-stream-chat")
         }
       }
-      // Call the original fetch with potentially modified parameters
 
       const response = await originalFetch.call(this, url, options)
       if (watcher) {
@@ -77,34 +82,11 @@ export async function interceptZaiFetchCall(bridge: ProxyBridge) {
       // Clone the response to allow reading its body multiple times
       const responseClone = response.clone()
 
-      try {
-        const responseBody = await responseClone.text()
-        console.log("[CRXJS] Fetch response:", {
-          url: typeof url === "string" ? url : (url as any).url || url,
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          body: responseBody,
-        })
+      // Prioritize handling as stream first
+      const isStreamResponse = response.headers.get("content-type")?.includes("text/event-stream") || response.headers.get("content-type")?.includes("application/octet-stream") || response.body?.locked === true
 
-        // Send response data to socket.io server
-        const responseData = {
-          type: "fetch_response",
-          timestamp: Date.now(),
-          url: typeof url === "string" ? url : (url as any).url || url,
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          body: responseBody,
-        }
-        // bridge.sendMessage(responseData)
-        if (watcher) {
-          if (url.includes(watcher.matchSourceUrl)) {
-            watcher.setPhase("DATA", responseData)
-          }
-        }
-      } catch (e) {
-        // Response might be a stream that can't be cloned, log basic info
+      if (isStreamResponse) {
+        // Response is a stream, log basic info without trying to read body
         console.log("[CRXJS] Fetch response (stream):", {
           url: typeof url === "string" ? url : (url as any).url || url,
           status: response.status,
@@ -125,6 +107,59 @@ export async function interceptZaiFetchCall(bridge: ProxyBridge) {
         if (watcher) {
           if (url.includes(watcher.matchSourceUrl)) {
             watcher.setPhase("DATA", responseData)
+          }
+        }
+      } else {
+        // Not a stream, try to read the body as text
+        try {
+          const responseBody = await responseClone.text()
+          console.log("[CRXJS] Fetch response:", {
+            url: typeof url === "string" ? url : (url as any).url || url,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            body: responseBody,
+          })
+
+          // Send response data to socket.io server
+          const responseData = {
+            type: "fetch_response",
+            timestamp: Date.now(),
+            url: typeof url === "string" ? url : (url as any).url || url,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            body: responseBody,
+          }
+          // bridge.sendMessage(responseData)
+          if (watcher) {
+            if (url.includes(watcher.matchSourceUrl)) {
+              watcher.setPhase("DATA", responseData)
+            }
+          }
+        } catch (e) {
+          // Response couldn't be read as text, log basic info
+          console.log("[CRXJS] Fetch response (unreadable):", {
+            url: typeof url === "string" ? url : (url as any).url || url,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+          })
+
+          // Send response data to socket.io server without body
+          const responseData = {
+            type: "fetch_response",
+            timestamp: Date.now(),
+            url: typeof url === "string" ? url : (url as any).url || url,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+          }
+          // bridge.sendMessage(responseData)
+          if (watcher) {
+            if (url.includes(watcher.matchSourceUrl)) {
+              watcher.setPhase("DATA", responseData)
+            }
           }
         }
       }
