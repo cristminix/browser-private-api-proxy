@@ -71,12 +71,13 @@ class FetchResponseEventWatcher {
     return `data-${this.requestId}-${this.checksum}`
   }
   setPhase(phase: FetchPhase, data: any): void {
-    console.log({ data })
+    // console.log({ data })
+    const dataSent = { requestId: this.requestId, ...data }
     this.phase = phase
-    idb.set(this.getPhaseKey(), data)
+    idb.set(this.getPhaseKey(), dataSent)
 
     // Emit event to notify subscribers
-    fetchEventBus.emit(`phase:${this.getPhaseKey()}`, { phase, data })
+    fetchEventBus.emit(`phase:${this.getPhaseKey()}`, { phase, data: dataSent })
   }
 
   async getPhaseData(): Promise<FetchPhaseData | undefined> {
