@@ -6,7 +6,7 @@ import { triggerChangeEvent } from "./event-listeners"
 import { delay } from "../utils"
 import { FetchResponseEventWatcher } from "./fetch-response-watcher"
 import { Socket } from "socket.io-client"
-
+import * as idb from "idb-keyval"
 class ProxyBridge {
   socketUrl = "http://localhost:4001"
   socketConnected = false
@@ -152,7 +152,7 @@ class ProxyBridge {
       const { type, payload, requestId } = data
       // const { thinkEnabled } = payload
       // if (!thinkEnabled) jquery("button[data-autothink]").trigger("click")
-
+      await idb.set("x-trigger-web-ext", true)
       await delay(1000)
       this.onChat(payload, requestId)
 

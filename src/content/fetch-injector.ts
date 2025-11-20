@@ -14,9 +14,9 @@ declare global {
   }
 }
 import { delay } from "../utils"
-import { createFakeFetchResponse } from "./fetch-utils"
 import { bridge } from "./socket-client"
 import jquery from "jquery"
+import * as idb from "idb-keyval"
 
 window.jquery = jquery
 // This code runs in the page context, not the content script context
@@ -44,6 +44,12 @@ if (!(window as any).fetchInterceptorInjected) {
         type: "fetch_request",
         timestamp: Date.now(),
         ...options,
+      }
+      const triggeredFromX = await idb.get("x-trigger-web-ext")
+      if (triggeredFromX) {
+        await idb.set("x-trigger-web-ext", false)
+      } else {
+        return originalFetch.call(this, resource, options)
       }
 
       // Send request data to socket.io server

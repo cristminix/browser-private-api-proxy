@@ -145,7 +145,7 @@ class FetchResponseEventWatcher {
     }
 
     if (this.eventListener) {
-      fetchEventBus.off(`phase:${this.checksum}`, this.eventListener)
+      fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener)
       this.eventListener = null
     }
   }
