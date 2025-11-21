@@ -5,14 +5,14 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build-script-inject": "esbuild src/content/fetch-injector.ts --minify --bundle --outfile=src/content/dist/fetch-injector.js --loader:.js=jsx",
-    "bsi-watch-src": "esbuild src/content/fetch-injector.ts --watch --minify --bundle --outfile=src/content/dist/fetch-injector.js --loader:.js=jsx",
-    "bsi-watch": "esbuild src/content/fetch-injector.ts --watch --minify --bundle --outfile=dist/src/content/dist/fetch-injector.js --loader:.js=jsx",
+    "build-script-inject": "esbuild src/content/fetch-injector.ts  --sourcemap --minify --bundle --outfile=src/content/dist/fetch-injector.js --loader:.js=jsx",
+    "bsi-watch-src": "esbuild src/content/fetch-injector.ts --sourcemap --watch --minify --bundle --outfile=src/content/dist/fetch-injector.js --loader:.js=jsx",
+    "bsi-watch": "esbuild src/content/fetch-injector.ts  --sourcemap --watch --minify --bundle --outfile=dist/src/content/dist/fetch-injector.js --loader:.js=jsx",
     "build": "pnpm run build-script-inject && vite build"
   },
   "dependencies": {
     "idb-keyval": "^6.2.2",
-    "jquery": "^3.7.1", 
+    "jquery": "^3.7.1",
     "socket.io-client": "^4.8.1",
     "svelte": "^5.36.12"
   },

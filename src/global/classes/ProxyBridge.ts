@@ -8,6 +8,10 @@ import { Socket } from "socket.io-client"
 import * as idb from "idb-keyval"
 import { FetchResponseEventWatcher } from "./FetchResponseEventWatcher"
 import { Mutex } from "./Mutex"
+import type { PlatformStrategy } from "../interfaces/PlatformStrategy"
+import { ZaiStrategy } from "../strategies/ZaiStrategy"
+import { OreillyStrategy } from "../strategies/OreillyStrategy"
+import { GenericStrategy } from "../strategies/GenericStrategy"
 
 // Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
 const triggerMutex = new Mutex()
@@ -21,6 +25,8 @@ export class ProxyBridge {
   socketExitTimeout = 6000
   appName = "generic-proxy"
   watcher: FetchResponseEventWatcher | null = null
+  private strategy: PlatformStrategy
+
   constructor() {
     this.socket = io(this.socketUrl, {
       // Disable automatic reconnection to allow the program to exit when server is not available
@@ -30,106 +36,54 @@ export class ProxyBridge {
       transports: ["websocket"], // Use only websocket transport
     })
 
-    this.appName = this.determineAppName()
+    // Initialize strategy based on current hostname
+    this.strategy = this.initializeStrategy()
+    this.appName = this.strategy.name
     console.log("APP_NAME", this.appName)
     this.initSocketCallback()
   }
-  isZai() {
+
+  /**
+   * Initialize the appropriate strategy based on the current hostname
+   */
+  private initializeStrategy(): PlatformStrategy {
     const hostname = window.location.hostname
+    const strategies: PlatformStrategy[] = [
+      new ZaiStrategy(),
+      new OreillyStrategy(),
+      new GenericStrategy(),
+    ]
 
-    return hostname.includes("z.ai")
+    for (const strategy of strategies) {
+      if (strategy.isMatch(hostname)) {
+        return strategy
+      }
+    }
+
+    // Default to generic strategy if no match is found
+    return new GenericStrategy()
   }
-  private determineAppName(): string {
-    const hostname = window.location.hostname
 
-    if (hostname.includes("z.ai")) {
-      return "zai-proxy"
-    }
-    if (hostname.includes("learning.oreilly.com")) {
-      return "oreally-proxy"
-    }
-
-    return "generic-proxy"
+  /**
+   * Update strategy (useful for testing or dynamic switching)
+   */
+  setStrategy(strategy: PlatformStrategy): void {
+    this.strategy = strategy
+    this.appName = strategy.name
   }
-  async waitForFetchResponseEvent(
-    matchSourceUrl: string,
-    timeout: number,
-    requestId: string
-  ) {
-    try {
-      // Validate input parameters
-      if (!matchSourceUrl || typeof matchSourceUrl !== "string") {
-        throw new Error("Invalid matchSourceUrl parameter")
-      }
 
-      if (!timeout || timeout <= 0) {
-        throw new Error("Invalid timeout parameter")
-      }
-
-      // Log the start of the operation
-      console.log(
-        `Starting to wait for fetch response event from ${matchSourceUrl} with timeout ${timeout}ms`
-      )
-      let replaceUrl = ""
-      if (this.isZai()) {
-        replaceUrl = "http://localhost:4001/api/fake-stream-chat"
-      }
-      // Create a new watcher instance
-      this.watcher = new FetchResponseEventWatcher(
-        matchSourceUrl,
-        timeout,
-        requestId,
-        replaceUrl
-      )
-
-      // Wait for the watcher to complete
-      const data = await this.watcher.watch()
-
-      if (data) {
-        console.log("RECEIVED DATA", data)
-        // bridge.sendMessage(data)
-        if (this.socket) {
-          this.socket.emit("answer", data)
-          this.watcher = null
-        }
-      } else {
-        console.warn(
-          `No data received for ${matchSourceUrl} within timeout period`
-        )
-      }
-
-      return data
-    } catch (error) {
-      console.error(
-        `Error in waitForFetchResponseEvent for ${matchSourceUrl}:`,
-        error
-      )
-      throw error // Re-throw to allow caller to handle the error
-    }
+  setWatcher(watcher: FetchResponseEventWatcher) {
+    this.watcher = watcher
+  }
+  unsetWatcher() {
+    this.watcher = null
+  }
+  getWatcher() {
+    return this.watcher
   }
   async onChat(payload: any, requestId: string) {
-    // alert(`onChat(${JSON.stringify(payload)},${requestId})`)
-    const { prompt } = payload
-    if (this.isZai()) {
-      const chatInput = jquery("#chat-input")
-      const chatInputElem = chatInput[0]
-      const sendButton = jquery("#send-message-button")
-      //
-      chatInput.val(prompt)
-
-      // Add event listeners to capture keystrokes and changes on the chat input
-      if (chatInputElem) {
-        //@ts-ignore
-        triggerChangeEvent(chatInputElem)
-        await delay(256)
-        sendButton.trigger("click")
-        await this.waitForFetchResponseEvent(
-          "/api/v2/chat/completions",
-          6000,
-          requestId
-        )
-      }
-    }
+    // Delegate to strategy
+    await this.strategy.handleChat(payload, requestId, this)
   }
 
   onMessage(data: any) {
@@ -159,56 +113,23 @@ export class ProxyBridge {
       this.sendHeartBeat()
     })
     this.socket.on("heartbeat", () => {
-      console.log("HEARTBEAT")
+      // console.log("HEARTBEAT")
       // this.socketConnected = true
       this.sendHeartBeat()
     })
     this.socket.on("new-chat", (data: any) => {
-      if (this.isZai()) {
-        jquery("#sidebar-new-chat-button").trigger("click")
-      }
+      this.strategy.handleNewChat()
     })
     this.socket.on("chat-reload", (data: any) => {
-      if (this.isZai()) {
-        jquery("#sidebar-new-chat-button").trigger("click")
-        setTimeout(() => {
-          // document.location.reload()
-          window.history.back()
-        }, 3000)
-      }
+      this.strategy.handleChatReload()
     })
     this.socket.on("chat", async (data: any) => {
       console.log("CHAT")
-      if (this.isZai()) {
-        // jquery("#sidebar-new-chat-button").trigger("click")
-        // await delay(1000)
-
-        //web search
-        /*
-      jquery("span:contains('Web Search')").closest('button').click()
-
-      */
-
-        if (!data) return
-        const { type, payload, requestId } = data
-        // const { thinkEnabled } = payload
-        // if (!thinkEnabled) jquery("button[data-autothink]").trigger("click")
-
-        // Gunakan mutex untuk melindungi akses ke "x-trigger-web-ext"
-        await triggerMutex.withLock(async () => {
-          await idb.set("x-trigger-web-ext", true)
-        })
-
-        await delay(1000)
-        this.onChat(payload, requestId)
-
-        // this.socketConnected = true
-        // this.sendHeartBeat()
-      }
+      // Delegate to strategy
+      await this.strategy.handleChatEvent(data, this)
     })
     this.socket.on("connect_error", (error: any) => {
       console.error("Failed to connect to Socket.IO server:", error.message)
-      console.log("Exiting program as server is not available...")
       this.socketLastError = error
       this.socketConnected = false
     })
