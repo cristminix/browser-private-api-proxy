@@ -7,7 +7,7 @@ try {
   // Add to the page
   ;(document.head || document.documentElement).appendChild(script)
 
-  console.log("[CRXJS] Fetch interceptor injected into page DOM via web accessible resource")
+  // console.log("[CRXJS] Fetch interceptor injected into page DOM via web accessible resource")
 } catch (error) {
-  console.error("[CRXJS] Error injecting fetch-interceptor script:", error)
+  // console.error("[CRXJS] Error injecting fetch-interceptor script:", error)
 }

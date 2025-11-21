@@ -27,7 +27,7 @@ export class ZaiStrategy implements PlatformStrategy {
    * Mengembalikan URL pengganti untuk fetch response event
    */
   getReplaceUrl(): string {
-    return "http://localhost:4001/api/fake-stream-chat"
+    return "http://localhost:4001/api/fake-stream-chat?platform=z.ai"
   }
 
   /**

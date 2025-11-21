@@ -6,7 +6,7 @@ import * as idb from "idb-keyval"
 // Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
 const triggerMutex = new Mutex()
 
-export async function interceptZaiFetchCall(bridge: ProxyBridge) {
+export async function interceptFetchCall(bridge: ProxyBridge) {
   // Store the original fetch function
   const originalFetch = window.fetch
 
@@ -21,7 +21,9 @@ export async function interceptZaiFetchCall(bridge: ProxyBridge) {
       headers: init?.headers,
       body: init?.body,
     }
-
+    if (!watcher) {
+      return originalFetch.call(this, url, options)
+    }
     try {
       // Prepare request data to send to socket.io server
       const requestData = {
@@ -92,12 +94,12 @@ export async function interceptZaiFetchCall(bridge: ProxyBridge) {
 
       if (isStreamResponse) {
         // Response is a stream, log basic info without trying to read body
-        console.log("[CRXJS] Fetch response (stream):", {
+        /* console.log("[CRXJS] Fetch response (stream):", {
           url: typeof url === "string" ? url : (url as any).url || url,
           status: response.status,
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
-        })
+        })*/
 
         // Send response data to socket.io server without body
         const responseData = {
@@ -118,13 +120,13 @@ export async function interceptZaiFetchCall(bridge: ProxyBridge) {
         // Not a stream, try to read the body as text
         try {
           const responseBody = await responseClone.text()
-          console.log("[CRXJS] Fetch response:", {
+          /*  console.log("[CRXJS] Fetch response:", {
             url: typeof url === "string" ? url : (url as any).url || url,
             status: response.status,
             statusText: response.statusText,
             headers: Object.fromEntries(response.headers.entries()),
             body: responseBody,
-          })
+          })*/
 
           // Send response data to socket.io server
           const responseData = {
@@ -144,12 +146,14 @@ export async function interceptZaiFetchCall(bridge: ProxyBridge) {
           }
         } catch (e) {
           // Response couldn't be read as text, log basic info
+          /*
           console.log("[CRXJS] Fetch response (unreadable):", {
             url: typeof url === "string" ? url : (url as any).url || url,
             status: response.status,
             statusText: response.statusText,
             headers: Object.fromEntries(response.headers.entries()),
           })
+            */
 
           // Send response data to socket.io server without body
           const responseData = {
