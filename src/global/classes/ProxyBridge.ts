@@ -12,6 +12,7 @@ import type { PlatformStrategy } from "../interfaces/PlatformStrategy"
 import { ZaiStrategy } from "../strategies/ZaiStrategy"
 import { OreillyStrategy } from "../strategies/OreillyStrategy"
 import { GenericStrategy } from "../strategies/GenericStrategy"
+import { MistralStrategy } from "../strategies/MistralStrategy"
 
 // Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
 const triggerMutex = new Mutex()
@@ -50,6 +51,7 @@ export class ProxyBridge {
     const hostname = window.location.hostname
     const strategies: PlatformStrategy[] = [
       new ZaiStrategy(),
+      new MistralStrategy(),
       new OreillyStrategy(),
       new GenericStrategy(),
     ]

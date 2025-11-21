@@ -3,7 +3,14 @@ import { crc32 } from "../../utils"
 import { EventEmitter } from "./EventEmitter"
 
 // Define types for better type safety
-export type FetchPhase = "INIT" | "REQUEST" | "HEADERS" | "RESPONSE" | "ERROR" | "DATA" | "FETCH"
+export type FetchPhase =
+  | "INIT"
+  | "REQUEST"
+  | "HEADERS"
+  | "RESPONSE"
+  | "ERROR"
+  | "DATA"
+  | "FETCH"
 
 export interface FetchPhaseData {
   phase?: FetchPhase
@@ -24,7 +31,12 @@ export class FetchResponseEventWatcher {
   private timeoutId: NodeJS.Timeout | null = null
   private eventListener: Function | null = null
 
-  constructor(matchSourceUrl: string, timeout: number, requestId: string, replaceUrl: string) {
+  constructor(
+    matchSourceUrl: string,
+    timeout: number,
+    requestId: string,
+    replaceUrl: string
+  ) {
     this.matchSourceUrl = matchSourceUrl
     this.timeout = timeout
     this.checksum = crc32(matchSourceUrl)
@@ -50,18 +62,28 @@ export class FetchResponseEventWatcher {
     return idb.get(this.getPhaseKey())
   }
 
-  async watch(): Promise<FetchPhaseData> {
+  async watch(breakOnPhase: string = "FETCH"): Promise<FetchPhaseData> {
     return new Promise<FetchPhaseData>((resolve, reject) => {
       // Set up timeout
       this.timeoutId = setTimeout(() => {
         if (this.phase === "INIT") {
           fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener!)
-          reject(new Error(`Timeout waiting for fetch response from ${this.matchSourceUrl}`))
+          reject(
+            new Error(
+              `Timeout waiting for fetch response from ${this.matchSourceUrl}`
+            )
+          )
         }
       }, this.timeout)
 
       // Set up event listener for phase changes
-      this.eventListener = ({ phase, data }: { phase: FetchPhase; data: any }) => {
+      this.eventListener = ({
+        phase,
+        data,
+      }: {
+        phase: FetchPhase
+        data: any
+      }) => {
         this.phase = phase
         this.phaseData = { ...data, phase }
 
@@ -71,17 +93,27 @@ export class FetchResponseEventWatcher {
         switch (phase) {
           case "ERROR":
             if (this.timeoutId) clearTimeout(this.timeoutId)
-            fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener!)
-            reject(new Error(`Error in fetch response: ${JSON.stringify(data)}`))
+            fetchEventBus.off(
+              `phase:${this.getPhaseKey()}`,
+              this.eventListener!
+            )
+            reject(
+              new Error(`Error in fetch response: ${JSON.stringify(data)}`)
+            )
             break
           case "DATA":
           case "FETCH":
-            if (this.timeoutId) clearTimeout(this.timeoutId)
-            fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener!)
-            if (this.phaseData) {
-              resolve(this.phaseData)
-            } else {
-              reject(new Error("Phase data is null when trying to resolve"))
+            if (phase === breakOnPhase) {
+              if (this.timeoutId) clearTimeout(this.timeoutId)
+              fetchEventBus.off(
+                `phase:${this.getPhaseKey()}`,
+                this.eventListener!
+              )
+              if (this.phaseData) {
+                resolve(this.phaseData)
+              } else {
+                reject(new Error("Phase data is null when trying to resolve"))
+              }
             }
             break
           // Other phases are just logged but don't resolve the promise

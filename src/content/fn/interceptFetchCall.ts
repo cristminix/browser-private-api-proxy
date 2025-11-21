@@ -2,7 +2,8 @@ import type { ProxyBridge } from "@/global/classes/ProxyBridge"
 import { Mutex } from "../../global/classes/Mutex"
 import { delay } from "../../utils"
 import * as idb from "idb-keyval"
-
+import { streamToResponse } from "./streamToResponse"
+import jquery from "jquery"
 // Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
 const triggerMutex = new Mutex()
 
@@ -21,9 +22,10 @@ export async function interceptFetchCall(bridge: ProxyBridge) {
       headers: init?.headers,
       body: init?.body,
     }
-    if (!watcher) {
-      return originalFetch.call(this, url, options)
-    }
+    // console.log(watcher)
+    // if (!watcher) {
+    //   return originalFetch.call(this, url, options)
+    // }
     try {
       // Prepare request data to send to socket.io server
       const requestData = {
@@ -69,9 +71,11 @@ export async function interceptFetchCall(bridge: ProxyBridge) {
       console.log({ shouldCallOriginalFetch, watcher })
       // Panggil fetch palsu jika tidak diintercept
       if (!shouldCallOriginalFetch && watcher) {
-        // Gunakan URL palsu untuk semua URL, bukan hanya yang cocok dengan watcher
-        if (watcher.replaceUrl.trim().length > 0)
-          return await originalFetch.call(this, watcher.replaceUrl)
+        if (bridge.appName === "zai-proxy") {
+          // Gunakan URL palsu untuk semua URL, bukan hanya yang cocok dengan watcher
+          if (watcher.replaceUrl.trim().length > 0)
+            return await originalFetch.call(this, watcher.replaceUrl)
+        }
       }
 
       const response = await originalFetch.call(this, url, options)
@@ -93,6 +97,7 @@ export async function interceptFetchCall(bridge: ProxyBridge) {
         response.body?.locked === true
 
       if (isStreamResponse) {
+        console.log("response is stream")
         // Response is a stream, log basic info without trying to read body
         /* console.log("[CRXJS] Fetch response (stream):", {
           url: typeof url === "string" ? url : (url as any).url || url,
@@ -100,22 +105,30 @@ export async function interceptFetchCall(bridge: ProxyBridge) {
           statusText: response.statusText,
           headers: Object.fromEntries(response.headers.entries()),
         })*/
-
-        // Send response data to socket.io server without body
-        const responseData = {
-          type: "fetch_response",
-          timestamp: Date.now(),
-          url: typeof url === "string" ? url : (url as any).url || url,
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-        }
-        // bridge.sendMessage(responseData)
-        if (watcher) {
-          if (url.includes(watcher.matchSourceUrl)) {
-            watcher.setPhase("DATA", responseData)
+        const updatePashe = async () => {
+          const streamResponse = await streamToResponse(response)
+          // Send response data to socket.io server without body
+          const responseData = {
+            type: "fetch_response",
+            timestamp: Date.now(),
+            url: typeof url === "string" ? url : (url as any).url || url,
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            data: streamResponse,
+          }
+          // bridge.sendMessage(responseData)
+          if (watcher) {
+            if (url.includes(watcher.matchSourceUrl)) {
+              watcher.setPhase("DATA", responseData)
+            }
+            setTimeout(() => {
+              jquery("span:contains('New chat')").closest("a")[0].click()
+            }, 1000)
           }
         }
+        updatePashe()
+        return response
       } else {
         // Not a stream, try to read the body as text
         try {
