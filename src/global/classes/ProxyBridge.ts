@@ -34,6 +34,11 @@ export class ProxyBridge {
     console.log("APP_NAME", this.appName)
     this.initSocketCallback()
   }
+  isZai() {
+    const hostname = window.location.hostname
+
+    return hostname.includes("z.ai")
+  }
   private determineAppName(): string {
     const hostname = window.location.hostname
 
@@ -46,7 +51,11 @@ export class ProxyBridge {
 
     return "generic-proxy"
   }
-  async waitForFetchResponseEvent(matchSourceUrl: string, timeout: number, requestId: string) {
+  async waitForFetchResponseEvent(
+    matchSourceUrl: string,
+    timeout: number,
+    requestId: string
+  ) {
     try {
       // Validate input parameters
       if (!matchSourceUrl || typeof matchSourceUrl !== "string") {
@@ -58,10 +67,20 @@ export class ProxyBridge {
       }
 
       // Log the start of the operation
-      console.log(`Starting to wait for fetch response event from ${matchSourceUrl} with timeout ${timeout}ms`)
-
+      console.log(
+        `Starting to wait for fetch response event from ${matchSourceUrl} with timeout ${timeout}ms`
+      )
+      let replaceUrl = ""
+      if (this.isZai()) {
+        replaceUrl = "http://localhost:4001/api/fake-stream-chat"
+      }
       // Create a new watcher instance
-      this.watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout, requestId, "http://localhost:4001/api/fake-stream-chat")
+      this.watcher = new FetchResponseEventWatcher(
+        matchSourceUrl,
+        timeout,
+        requestId,
+        replaceUrl
+      )
 
       // Wait for the watcher to complete
       const data = await this.watcher.watch()
@@ -74,31 +93,42 @@ export class ProxyBridge {
           this.watcher = null
         }
       } else {
-        console.warn(`No data received for ${matchSourceUrl} within timeout period`)
+        console.warn(
+          `No data received for ${matchSourceUrl} within timeout period`
+        )
       }
 
       return data
     } catch (error) {
-      console.error(`Error in waitForFetchResponseEvent for ${matchSourceUrl}:`, error)
+      console.error(
+        `Error in waitForFetchResponseEvent for ${matchSourceUrl}:`,
+        error
+      )
       throw error // Re-throw to allow caller to handle the error
     }
   }
   async onChat(payload: any, requestId: string) {
     // alert(`onChat(${JSON.stringify(payload)},${requestId})`)
     const { prompt } = payload
-    const chatInput = jquery("#chat-input")
-    const chatInputElem = chatInput[0]
-    const sendButton = jquery("#send-message-button")
-    //
-    chatInput.val(prompt)
+    if (this.isZai()) {
+      const chatInput = jquery("#chat-input")
+      const chatInputElem = chatInput[0]
+      const sendButton = jquery("#send-message-button")
+      //
+      chatInput.val(prompt)
 
-    // Add event listeners to capture keystrokes and changes on the chat input
-    if (chatInputElem) {
-      //@ts-ignore
-      triggerChangeEvent(chatInputElem)
-      await delay(256)
-      sendButton.trigger("click")
-      await this.waitForFetchResponseEvent("/api/v2/chat/completions", 6000, requestId)
+      // Add event listeners to capture keystrokes and changes on the chat input
+      if (chatInputElem) {
+        //@ts-ignore
+        triggerChangeEvent(chatInputElem)
+        await delay(256)
+        sendButton.trigger("click")
+        await this.waitForFetchResponseEvent(
+          "/api/v2/chat/completions",
+          6000,
+          requestId
+        )
+      }
     }
   }
 
@@ -134,41 +164,47 @@ export class ProxyBridge {
       this.sendHeartBeat()
     })
     this.socket.on("new-chat", (data: any) => {
-      jquery("#sidebar-new-chat-button").trigger("click")
+      if (this.isZai()) {
+        jquery("#sidebar-new-chat-button").trigger("click")
+      }
     })
     this.socket.on("chat-reload", (data: any) => {
-      jquery("#sidebar-new-chat-button").trigger("click")
-      setTimeout(() => {
-        // document.location.reload()
-        window.history.back()
-      }, 3000)
+      if (this.isZai()) {
+        jquery("#sidebar-new-chat-button").trigger("click")
+        setTimeout(() => {
+          // document.location.reload()
+          window.history.back()
+        }, 3000)
+      }
     })
     this.socket.on("chat", async (data: any) => {
       console.log("CHAT")
-      // jquery("#sidebar-new-chat-button").trigger("click")
-      // await delay(1000)
+      if (this.isZai()) {
+        // jquery("#sidebar-new-chat-button").trigger("click")
+        // await delay(1000)
 
-      //web search
-      /*
+        //web search
+        /*
       jquery("span:contains('Web Search')").closest('button').click()
 
       */
 
-      if (!data) return
-      const { type, payload, requestId } = data
-      // const { thinkEnabled } = payload
-      // if (!thinkEnabled) jquery("button[data-autothink]").trigger("click")
+        if (!data) return
+        const { type, payload, requestId } = data
+        // const { thinkEnabled } = payload
+        // if (!thinkEnabled) jquery("button[data-autothink]").trigger("click")
 
-      // Gunakan mutex untuk melindungi akses ke "x-trigger-web-ext"
-      await triggerMutex.withLock(async () => {
-        await idb.set("x-trigger-web-ext", true)
-      })
+        // Gunakan mutex untuk melindungi akses ke "x-trigger-web-ext"
+        await triggerMutex.withLock(async () => {
+          await idb.set("x-trigger-web-ext", true)
+        })
 
-      await delay(1000)
-      this.onChat(payload, requestId)
+        await delay(1000)
+        this.onChat(payload, requestId)
 
-      // this.socketConnected = true
-      // this.sendHeartBeat()
+        // this.socketConnected = true
+        // this.sendHeartBeat()
+      }
     })
     this.socket.on("connect_error", (error: any) => {
       console.error("Failed to connect to Socket.IO server:", error.message)
@@ -215,7 +251,13 @@ export class ProxyBridge {
         this.onMessage(data)
 
         if (data && typeof data === "object" && "type" in data) {
-          if (data.type === "pong" && message && typeof message === "object" && "type" in message && message.type === "ping") {
+          if (
+            data.type === "pong" &&
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === "ping"
+          ) {
             resolve(data)
             return
           }
