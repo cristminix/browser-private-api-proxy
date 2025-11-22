@@ -118,6 +118,9 @@ export class ProxyBridge {
     this.socket.on("new-chat", (data: any) => {
       this.strategy.handleNewChat()
     })
+    this.socket.on("get-current-chat", (data: any) => {
+      this.strategy.handleGetCurrentChat?.(this)
+    })
     this.socket.on("chat-reload", (data: any) => {
       this.strategy.handleChatReload()
     })

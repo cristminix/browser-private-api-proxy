@@ -6,6 +6,7 @@ import type { ProxyBridge } from "../classes/ProxyBridge"
  * untuk setiap platform yang didukung oleh ProxyBridge
  */
 export interface PlatformStrategy {
+  handleGetCurrentChat?(bridge: ProxyBridge): void
   /**
    * Nama unik untuk identifikasi platform
    */
@@ -24,11 +25,7 @@ export interface PlatformStrategy {
   /**
    * Menangani permintaan chat dari server
    */
-  handleChat(
-    payload: any,
-    requestId: string,
-    bridge: ProxyBridge
-  ): Promise<void>
+  handleChat(payload: any, requestId: string, bridge: ProxyBridge): Promise<void>
 
   /**
    * Menangani event new-chat dari server

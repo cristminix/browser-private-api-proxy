@@ -27,7 +27,17 @@ export class DeepSeekStrategy implements PlatformStrategy {
   isMatch(hostname: string): boolean {
     return hostname.includes("deepseek.com")
   }
+  handleGetCurrentChat(bridge: ProxyBridge) {
+    // for example https://chat.deepseek.com/a/chat/s/9eb2e582-5626-405e-85b7-22bd441f8581
+    const currentLocation = document.location.href
+    const match = currentLocation.match(/\/chat\/s\/([a-f0-9-]+)/)
+    const chatId = match ? match[1] : null
 
+    if (bridge.socket) {
+      bridge.socket.emit("return-chat-id", { chatId })
+      // bridge.unsetWatcher()
+    }
+  }
   /**
    * Mengembalikan URL pengganti untuk fetch response event
    */
