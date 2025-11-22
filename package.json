@@ -13,6 +13,7 @@
   "dependencies": {
     "idb-keyval": "^6.2.2",
     "jquery": "^3.7.1",
+    "react-trigger-change": "^1.0.2",
     "socket.io-client": "^4.8.1",
     "svelte": "^5.36.12"
   },

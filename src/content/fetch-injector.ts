@@ -1,6 +1,7 @@
 import { ProxyBridge } from "../global/classes/ProxyBridge"
 import { interceptFetchCall } from "./fn/interceptFetchCall"
 import jquery from "jquery"
+import { interceptXHRCall } from "./fn/interceptXHRCall"
 const bridge = new ProxyBridge()
 
 window.jquery = jquery
@@ -10,6 +11,7 @@ jquery(document).ready(() => {
     // console.log("[CRXJS] Fetch interceptor injected into page DOM")
     // if (document.location.hostname.includes("z.ai")) {
     interceptFetchCall(bridge)
+    interceptXHRCall(bridge)
     ;(window as any).fetchInterceptorInjected = true
     // console.log("[CRXJS] Fetch interception enabled via DOM injection")
     // }

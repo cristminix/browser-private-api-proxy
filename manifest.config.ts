@@ -17,13 +17,13 @@ export default defineManifest({
   content_scripts: [
     {
       js: ["src/content/main.ts"],
-      matches: ["https://chat.mistral.ai/*"],
+      matches: ["https://chat.deepseek.com/*"],
     },
   ],
   web_accessible_resources: [
     {
       resources: ["src/content/dist/fetch-injector.js"],
-      matches: ["https://chat.mistral.ai/*"],
+      matches: ["https://chat.deepseek.com/*"],
     },
   ],
   permissions: ["sidePanel", "contentSettings"],

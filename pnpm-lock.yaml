@@ -14,6 +14,9 @@ importers:
       jquery:
         specifier: ^3.7.1
         version: 3.7.1
+      react-trigger-change:
+        specifier: ^1.0.2
+        version: 1.0.2
       socket.io-client:
         specifier: ^4.8.1
         version: 4.8.1
@@ -839,6 +842,9 @@ packages:
     resolution: {integrity: sha512-XP8A9BT0CpRBD+NYLLeIhld/RqG9+gktUjW1FkE+Vm7OCinbG1SshcK5tb9ls4kzvjZr9mOQc7HYgBngEyPAXg==}
     engines: {node: '>=0.10.0'}
 
+  react-trigger-change@1.0.2:
+    resolution: {integrity: sha512-3x2i/CTQZZlzTuDIfOrJ12r1IqcNWLxHVHXKTtlb4L0slt6Zy3YF3smimx4kdX4X/ASSuQnI/n1q4cTqDwWkPA==}
+
   readable-stream@2.3.8:
     resolution: {integrity: sha512-8p0AUk4XODgIewSi0l8Epjs+EVnWiK7NoDIEGU0HhE7+ZyY8D1IMY7odu5lRrFXGg71L15KG8QrPmum45RTtdA==}
 
@@ -1653,6 +1659,8 @@ snapshots:
   queue-microtask@1.2.3: {}
 
   react-refresh@0.13.0: {}
+
+  react-trigger-change@1.0.2: {}
 
   readable-stream@2.3.8:
     dependencies:

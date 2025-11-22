@@ -13,6 +13,7 @@ import { ZaiStrategy } from "../strategies/ZaiStrategy"
 import { OreillyStrategy } from "../strategies/OreillyStrategy"
 import { GenericStrategy } from "../strategies/GenericStrategy"
 import { MistralStrategy } from "../strategies/MistralStrategy"
+import { DeepSeekStrategy } from "../strategies/DeepSeekStrategy"
 
 // Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
 const triggerMutex = new Mutex()
@@ -49,12 +50,7 @@ export class ProxyBridge {
    */
   private initializeStrategy(): PlatformStrategy {
     const hostname = window.location.hostname
-    const strategies: PlatformStrategy[] = [
-      new ZaiStrategy(),
-      new MistralStrategy(),
-      new OreillyStrategy(),
-      new GenericStrategy(),
-    ]
+    const strategies: PlatformStrategy[] = [new ZaiStrategy(), new DeepSeekStrategy(), new MistralStrategy(), new OreillyStrategy(), new GenericStrategy()]
 
     for (const strategy of strategies) {
       if (strategy.isMatch(hostname)) {
@@ -174,13 +170,7 @@ export class ProxyBridge {
         this.onMessage(data)
 
         if (data && typeof data === "object" && "type" in data) {
-          if (
-            data.type === "pong" &&
-            message &&
-            typeof message === "object" &&
-            "type" in message &&
-            message.type === "ping"
-          ) {
+          if (data.type === "pong" && message && typeof message === "object" && "type" in message && message.type === "ping") {
             resolve(data)
             return
           }
