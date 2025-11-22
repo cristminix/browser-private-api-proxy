@@ -110,7 +110,19 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
                 if (bridge.appName === "deepseek-proxy") {
                   setTimeout(() => {
-                    document.location.reload()
+                    console.log(this._requestBody)
+                    try {
+                      //@ts-ignore
+                      const inputBody = JSON.parse(this._requestBody)
+                      if (inputBody) {
+                        const { chat_session_id } = inputBody
+                        document.location.href = `https://chat.deepseek.com/a/chat/s/${chat_session_id}`
+                      }
+                    } catch (error) {
+                      document.location.reload()
+                    }
+                    //https://chat.deepseek.com/a/chat/s/cd2ac03a-55e7-4cd9-9892-c0bd19b938d6
+                    // document.location.reload()
                   }, 3000)
                 }
                 fakeXHR.send(this._requestBody)
