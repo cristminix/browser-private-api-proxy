@@ -48,7 +48,11 @@ export class DeepSeekStrategy implements PlatformStrategy {
   /**
    * Menangani permintaan chat dari server
    */
-  async handleChat(payload: any, requestId: string, bridge: ProxyBridge): Promise<void> {
+  async handleChat(
+    payload: any,
+    requestId: string,
+    bridge: ProxyBridge
+  ): Promise<void> {
     const { prompt } = payload
     const chatInput = jquery("textarea[placeholder='Message DeepSeek']")
 
@@ -64,7 +68,12 @@ export class DeepSeekStrategy implements PlatformStrategy {
       sendButton.trigger("click")
 
       // Menunggu respons fetch dengan timeout
-      await this.waitForFetchResponseEvent("/api/v0/chat/completion", 6000, requestId, bridge)
+      await this.waitForFetchResponseEvent(
+        "/api/v0/chat/completion",
+        6000,
+        requestId,
+        bridge
+      )
     }
   }
 
@@ -106,12 +115,22 @@ export class DeepSeekStrategy implements PlatformStrategy {
   /**
    * Menunggu respons fetch event (dipindahkan dari ProxyBridge)
    */
-  private async waitForFetchResponseEvent(matchSourceUrl: string, timeout: number, requestId: string, bridge: ProxyBridge): Promise<any> {
+  private async waitForFetchResponseEvent(
+    matchSourceUrl: string,
+    timeout: number,
+    requestId: string,
+    bridge: ProxyBridge
+  ): Promise<any> {
     try {
       // Import secara dinamis untuk menghindari circular dependency
 
       // Create a new watcher instance
-      const watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout, requestId, this.getReplaceUrl())
+      const watcher = new FetchResponseEventWatcher(
+        matchSourceUrl,
+        timeout,
+        requestId,
+        this.getReplaceUrl()
+      )
       bridge.setWatcher(watcher)
       // Wait for the watcher to complete
       const data = await watcher.watch()
@@ -125,12 +144,17 @@ export class DeepSeekStrategy implements PlatformStrategy {
           // bridge.unsetWatcher()
         }
       } else {
-        console.warn(`No data received for ${matchSourceUrl} within timeout period`)
+        console.warn(
+          `No data received for ${matchSourceUrl} within timeout period`
+        )
       }
 
       return data
     } catch (error) {
-      console.error(`Error in waitForFetchResponseEvent for ${matchSourceUrl}:`, error)
+      console.error(
+        `Error in waitForFetchResponseEvent for ${matchSourceUrl}:`,
+        error
+      )
       throw error
     }
   }

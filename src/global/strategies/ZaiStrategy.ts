@@ -48,7 +48,7 @@ export class ZaiStrategy implements PlatformStrategy {
     // Add event listeners to capture keystrokes and changes on the chat input
     if (chatInputElem) {
       triggerChangeEvent(chatInputElem as HTMLInputElement)
-      await delay(256)
+      await delay(2000)
       sendButton.trigger("click")
 
       // Menunggu respons fetch dengan timeout
