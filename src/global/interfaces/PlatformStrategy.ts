@@ -25,7 +25,11 @@ export interface PlatformStrategy {
   /**
    * Menangani permintaan chat dari server
    */
-  handleChat(payload: any, requestId: string, bridge: ProxyBridge): Promise<void>
+  handleChat(
+    payload: any,
+    requestId: string,
+    bridge: ProxyBridge
+  ): Promise<void>
 
   /**
    * Menangani event new-chat dari server
@@ -35,7 +39,7 @@ export interface PlatformStrategy {
   /**
    * Menangani event chat-reload dari server
    */
-  handleChatReload(): void
+  handleChatReload(chatIid: string | null | undefined): void
 
   /**
    * Menangani event chat dari server

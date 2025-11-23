@@ -50,7 +50,13 @@ export class ProxyBridge {
    */
   private initializeStrategy(): PlatformStrategy {
     const hostname = window.location.hostname
-    const strategies: PlatformStrategy[] = [new ZaiStrategy(), new DeepSeekStrategy(), new MistralStrategy(), new OreillyStrategy(), new GenericStrategy()]
+    const strategies: PlatformStrategy[] = [
+      new ZaiStrategy(),
+      new DeepSeekStrategy(),
+      new MistralStrategy(),
+      new OreillyStrategy(),
+      new GenericStrategy(),
+    ]
 
     for (const strategy of strategies) {
       if (strategy.isMatch(hostname)) {
@@ -122,7 +128,8 @@ export class ProxyBridge {
       this.strategy.handleGetCurrentChat?.(this)
     })
     this.socket.on("chat-reload", (data: any) => {
-      this.strategy.handleChatReload()
+      const { chatId } = data
+      this.strategy.handleChatReload(chatId)
     })
     this.socket.on("chat", async (data: any) => {
       console.log("CHAT")
@@ -173,7 +180,13 @@ export class ProxyBridge {
         this.onMessage(data)
 
         if (data && typeof data === "object" && "type" in data) {
-          if (data.type === "pong" && message && typeof message === "object" && "type" in message && message.type === "ping") {
+          if (
+            data.type === "pong" &&
+            message &&
+            typeof message === "object" &&
+            "type" in message &&
+            message.type === "ping"
+          ) {
             resolve(data)
             return
           }

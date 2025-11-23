@@ -87,11 +87,18 @@ export class DeepSeekStrategy implements PlatformStrategy {
   /**
    * Menangani event chat-reload dari server
    */
-  handleChatReload(): void {
-    jquery("#sidebar-new-chat-button").trigger("click")
+  handleChatReload(chatId: string | null | undefined = null): void {
+    const currentLocation = document.location.href
+    const match = currentLocation.match(/\/chat\/s\/([a-f0-9-]+)/)
+    const currentChatId = match ? match[1] : null
+
     setTimeout(() => {
-      // document.location.reload()
-      window.history.back()
+      //
+      if (chatId === currentChatId) {
+        document.location.reload()
+      } else if (chatId) {
+        document.location.href = `https://chat.deepseek.com/a/chat/s/${chatId}`
+      }
     }, 3000)
   }
 

@@ -132,7 +132,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
                 // Kirim request palsu
 
                 if (bridge.appName === "deepseek-proxy") {
-                  setTimeout(() => {
+                  /* setTimeout(() => {
                     console.log(this._requestBody)
                     try {
                       //@ts-ignore
@@ -146,7 +146,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
                     }
                     //https://chat.deepseek.com/a/chat/s/cd2ac03a-55e7-4cd9-9892-c0bd19b938d6
                     // document.location.reload()
-                  }, 5000)
+                  }, 5000)*/
                 }
                 fakeXHR.send(this._requestBody)
                 // }
