@@ -24,25 +24,12 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
       // Override the open method to capture URL and method
       const originalOpen = this.open
-      this.open = function (
-        method: string,
-        url: string | URL,
-        async?: boolean,
-        user?: string | null,
-        password?: string | null
-      ) {
+      this.open = function (method: string, url: string | URL, async?: boolean, user?: string | null, password?: string | null) {
         this._method = method.toUpperCase()
         this._url = typeof url === "string" ? url : url.toString()
 
         // Call the original open method
-        return originalOpen.call(
-          this,
-          method,
-          url,
-          async !== undefined ? async : true,
-          user,
-          password
-        )
+        return originalOpen.call(this, method, url, async !== undefined ? async : true, user, password)
       }
 
       // Override the setRequestHeader method to capture headers
@@ -54,9 +41,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
       // Override the send method to intercept the request
       const originalSend = this.send
-      this.send = async function (
-        body?: Document | XMLHttpRequestBodyInit | null
-      ) {
+      this.send = async function (body?: Document | XMLHttpRequestBodyInit | null) {
         this._requestBody = body
         const options = {
           url: this._url,
@@ -91,10 +76,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
           // Gunakan mutex untuk melindungi akses ke "x-trigger-web-ext"
           let shouldCallOriginalXHR = true
-          if (
-            this._watcher &&
-            this._url?.includes(this._watcher.matchSourceUrl)
-          ) {
+          if (this._watcher && this._url?.includes(this._watcher.matchSourceUrl)) {
             this._watcher.setPhase("FETCH", options)
             await delay(257)
 
@@ -112,10 +94,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
           // Panggil XHR palsu jika tidak diintercept
           if (!shouldCallOriginalXHR && this._watcher) {
-            if (
-              bridge.appName === "zai-proxy" ||
-              bridge.appName === "deepseek-proxy"
-            ) {
+            if (bridge.appName === "zai-proxy" || bridge.appName === "deepseek-proxy") {
               // Gunakan URL palsu untuk semua URL, bukan hanya yang cocok dengan watcher
               if (this._watcher.replaceUrl.trim().length > 0) {
                 // Buat XHR baru dengan URL palsu
@@ -123,34 +102,20 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
                 fakeXHR.open(this._method, this._watcher.replaceUrl, true)
 
                 // Salin header
-                for (const [key, value] of Object.entries(
-                  this._requestHeaders
-                )) {
+                for (const [key, value] of Object.entries(this._requestHeaders)) {
                   fakeXHR.setRequestHeader(key, value)
                 }
 
                 // Kirim request palsu
 
                 if (bridge.appName === "deepseek-proxy") {
-                  /* setTimeout(() => {
-                    console.log(this._requestBody)
-                    try {
-                      //@ts-ignore
-                      const inputBody = JSON.parse(this._requestBody)
-                      if (inputBody) {
-                        const { chat_session_id } = inputBody
-                        document.location.href = `https://chat.deepseek.com/a/chat/s/${chat_session_id}`
-                      }
-                    } catch (error) {
-                      document.location.reload()
-                    }
-                    //https://chat.deepseek.com/a/chat/s/cd2ac03a-55e7-4cd9-9892-c0bd19b938d6
-                    // document.location.reload()
-                  }, 5000)*/
-                }
-                fakeXHR.send(this._requestBody)
+                  setTimeout(() => {
+                    console.log("HELLO")
+                    return originalSend.call(this, this._requestBody)
+                  }, 5000)
+                } else return fakeXHR.send(this._requestBody)
                 // }
-                return fakeXHR
+                // return fakeXHR
               }
             }
           }
@@ -216,12 +181,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
           })
 
           this.addEventListener("error", async () => {
-            console.error(
-              "[CRXJS] XHR error:",
-              this.status,
-              this.statusText,
-              this._url
-            )
+            console.error("[CRXJS] XHR error:", this.status, this.statusText, this._url)
 
             // Send error to socket.io server
             const errorData = {

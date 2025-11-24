@@ -48,11 +48,7 @@ export class DeepSeekStrategy implements PlatformStrategy {
   /**
    * Menangani permintaan chat dari server
    */
-  async handleChat(
-    payload: any,
-    requestId: string,
-    bridge: ProxyBridge
-  ): Promise<void> {
+  async handleChat(payload: any, requestId: string, bridge: ProxyBridge): Promise<void> {
     const { prompt } = payload
     const chatInput = jquery("textarea[placeholder='Message DeepSeek']")
 
@@ -68,12 +64,7 @@ export class DeepSeekStrategy implements PlatformStrategy {
       sendButton.trigger("click")
 
       // Menunggu respons fetch dengan timeout
-      await this.waitForFetchResponseEvent(
-        "/api/v0/chat/completion",
-        6000,
-        requestId,
-        bridge
-      )
+      await this.waitForFetchResponseEvent("/api/v0/chat/completion", 6000, requestId, bridge)
     }
   }
 
@@ -87,19 +78,29 @@ export class DeepSeekStrategy implements PlatformStrategy {
   /**
    * Menangani event chat-reload dari server
    */
-  handleChatReload(chatId: string | null | undefined = null): void {
+  async handleChatReload(chatId: string | null | undefined = null) {
     const currentLocation = document.location.href
     const match = currentLocation.match(/\/chat\/s\/([a-f0-9-]+)/)
     const currentChatId = match ? match[1] : null
+    const chatUrl = `https://chat.deepseek.com/a/chat/s/${chatId}`
+    const homeUrl = `https://chat.deepseek.com`
 
-    setTimeout(() => {
-      //
-      if (chatId === currentChatId) {
-        document.location.reload()
-      } else if (chatId) {
-        document.location.href = `https://chat.deepseek.com/a/chat/s/${chatId}`
-      }
-    }, 3000)
+    await delay(3000)
+    //
+    if (chatId === currentChatId) {
+      history.pushState({}, "", homeUrl)
+      window.dispatchEvent(new PopStateEvent("popstate"))
+      await delay(1000)
+
+      history.pushState({}, "", chatUrl)
+      window.dispatchEvent(new PopStateEvent("popstate"))
+
+      // document.location.reload()
+    } else if (chatId) {
+      // document.location.href = `https://chat.deepseek.com/a/chat/s/${chatId}`
+      history.pushState({}, "", chatUrl)
+      window.dispatchEvent(new PopStateEvent("popstate"))
+    }
   }
 
   /**
@@ -122,22 +123,12 @@ export class DeepSeekStrategy implements PlatformStrategy {
   /**
    * Menunggu respons fetch event (dipindahkan dari ProxyBridge)
    */
-  private async waitForFetchResponseEvent(
-    matchSourceUrl: string,
-    timeout: number,
-    requestId: string,
-    bridge: ProxyBridge
-  ): Promise<any> {
+  private async waitForFetchResponseEvent(matchSourceUrl: string, timeout: number, requestId: string, bridge: ProxyBridge): Promise<any> {
     try {
       // Import secara dinamis untuk menghindari circular dependency
 
       // Create a new watcher instance
-      const watcher = new FetchResponseEventWatcher(
-        matchSourceUrl,
-        timeout,
-        requestId,
-        this.getReplaceUrl()
-      )
+      const watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout, requestId, this.getReplaceUrl())
       bridge.setWatcher(watcher)
       // Wait for the watcher to complete
       const data = await watcher.watch()
@@ -151,17 +142,12 @@ export class DeepSeekStrategy implements PlatformStrategy {
           // bridge.unsetWatcher()
         }
       } else {
-        console.warn(
-          `No data received for ${matchSourceUrl} within timeout period`
-        )
+        console.warn(`No data received for ${matchSourceUrl} within timeout period`)
       }
 
       return data
     } catch (error) {
-      console.error(
-        `Error in waitForFetchResponseEvent for ${matchSourceUrl}:`,
-        error
-      )
+      console.error(`Error in waitForFetchResponseEvent for ${matchSourceUrl}:`, error)
       throw error
     }
   }
