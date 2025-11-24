@@ -108,12 +108,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
                 // Kirim request palsu
 
-                if (bridge.appName === "deepseek-proxy") {
-                  setTimeout(() => {
-                    console.log("HELLO")
-                    return originalSend.call(this, this._requestBody)
-                  }, 5000)
-                } else return fakeXHR.send(this._requestBody)
+                return fakeXHR.send(this._requestBody)
                 // }
                 // return fakeXHR
               }
@@ -170,9 +165,6 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
               if (this._watcher) {
                 if (this._url?.includes(this._watcher.matchSourceUrl)) {
                   this._watcher.setPhase("DATA", response)
-                  setTimeout(() => {
-                    jquery("span:contains('New chat')").closest("a")[0].click()
-                  }, 1000)
                 }
               }
             } catch (e) {

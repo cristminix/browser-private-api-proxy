@@ -64,7 +64,7 @@ export class DeepSeekStrategy implements PlatformStrategy {
       sendButton.trigger("click")
 
       // Menunggu respons fetch dengan timeout
-      await this.waitForFetchResponseEvent("/api/v0/chat/completion", 6000, requestId, bridge)
+      await this.waitForFetchResponseEvent("/api/v0/chat/completion", 60000, requestId, bridge)
     }
   }
 
@@ -88,18 +88,18 @@ export class DeepSeekStrategy implements PlatformStrategy {
     await delay(3000)
     //
     if (chatId === currentChatId) {
-      history.pushState({}, "", homeUrl)
-      window.dispatchEvent(new PopStateEvent("popstate"))
-      await delay(1000)
+      // history.pushState({}, "", homeUrl)
+      // window.dispatchEvent(new PopStateEvent("popstate"))
+      // await delay(1000)
 
-      history.pushState({}, "", chatUrl)
-      window.dispatchEvent(new PopStateEvent("popstate"))
+      // history.pushState({}, "", chatUrl)
+      // window.dispatchEvent(new PopStateEvent("popstate"))
 
-      // document.location.reload()
+      document.location.reload()
     } else if (chatId) {
-      // document.location.href = `https://chat.deepseek.com/a/chat/s/${chatId}`
-      history.pushState({}, "", chatUrl)
-      window.dispatchEvent(new PopStateEvent("popstate"))
+      document.location.href = `https://chat.deepseek.com/a/chat/s/${chatId}`
+      // history.pushState({}, "", chatUrl)
+      // window.dispatchEvent(new PopStateEvent("popstate"))
     }
   }
 

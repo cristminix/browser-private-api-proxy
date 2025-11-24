@@ -73,8 +73,7 @@ export async function interceptFetchCall(bridge: ProxyBridge) {
       if (!shouldCallOriginalFetch && watcher) {
         if (bridge.appName === "zai-proxy") {
           // Gunakan URL palsu untuk semua URL, bukan hanya yang cocok dengan watcher
-          if (watcher.replaceUrl.trim().length > 0)
-            return await originalFetch.call(this, watcher.replaceUrl)
+          if (watcher.replaceUrl.trim().length > 0) return await originalFetch.call(this, watcher.replaceUrl)
         }
       }
 
@@ -89,12 +88,7 @@ export async function interceptFetchCall(bridge: ProxyBridge) {
       const responseClone = response.clone()
 
       // Prioritize handling as stream first
-      const isStreamResponse =
-        response.headers.get("content-type")?.includes("text/event-stream") ||
-        response.headers
-          .get("content-type")
-          ?.includes("application/octet-stream") ||
-        response.body?.locked === true
+      const isStreamResponse = response.headers.get("content-type")?.includes("text/event-stream") || response.headers.get("content-type")?.includes("application/octet-stream") || response.body?.locked === true
 
       if (isStreamResponse) {
         console.log("response is stream")
@@ -122,9 +116,6 @@ export async function interceptFetchCall(bridge: ProxyBridge) {
             if (url.includes(watcher.matchSourceUrl)) {
               watcher.setPhase("DATA", responseData)
             }
-            setTimeout(() => {
-              jquery("span:contains('New chat')").closest("a")[0].click()
-            }, 1000)
           }
         }
         updatePashe()
