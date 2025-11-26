@@ -16,13 +16,13 @@ export default defineManifest({
   },
   content_scripts: [
     {
-      js: ["src/content/main.ts"],
+      js: ["src/content/main.ts", "src/content-scripts/content.ts"],
       matches: ["https://gemini.google.com/*"],
     },
   ],
   web_accessible_resources: [
     {
-      resources: ["src/content/dist/fetch-injector.js"],
+      resources: ["src/content/dist/fetch-injector.js", "dist/src/content-scripts/inject/dist/inject.js", "dist/src/content-scripts/inject/dist/inject.css"],
       matches: ["https://gemini.google.com/*"],
     },
   ],

@@ -1,4 +1,17 @@
-const DEBUG_MODE = import.meta.env.VITE_DEBUG_MODE === "true"
+// Gunakan window untuk mengakses environment variable karena import.meta tidak didukung dalam format iife
+const getDebugMode = (): boolean => {
+  if (typeof window !== "undefined" && window) {
+    const win = window as any
+    if (win["VITE_DEBUG_MODE"]) {
+      return win["VITE_DEBUG_MODE"] === "true"
+    }
+  }
+  // Fallback ke environment variable global atau false
+  const globalAny = globalThis as any
+  return globalAny["VITE_DEBUG_MODE"] === "true" || false
+}
+
+const DEBUG_MODE = getDebugMode()
 
 export default class Logger {
   static debug(...data: any[]) {

@@ -11,5 +11,7 @@ export const createAppRootElement = (containerId: string, rootId: string) => {
 
   if (body) {
     body.prepend(containerDivElement)
+    console.log("B")
   }
+  console.log("C")
 }

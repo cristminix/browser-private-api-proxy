@@ -23,10 +23,10 @@
   export const urlPath = writable("")
 
   export function setValidCoursePage(value: boolean) {
-    validCoursePage.update((o) => value)
+    validCoursePage.set(value)
   }
   export function setUrlPath(value: string) {
-    urlPath.update((o) => value)
+    urlPath.set(value)
   }
 
   let inputScriptEl: HTMLTextAreaElement
@@ -44,7 +44,7 @@
       ocls: createRandCls("os"),
     }
     const caller = inputScriptEl.value
-    inputScriptCaller.update((o) => caller)
+    inputScriptCaller.set(caller)
 
     console.log(`ContentInject.runScript()`, { is, caller })
 
@@ -60,14 +60,14 @@
         console.log(`call topWindow.${method}(${param})`)
         const result = await topWindow[method](param)
         // console.log(result)
-        outputScript.update((o) => new Date().getTime().toString())
-        outputScriptCls.update((o) => ocls)
+        outputScript.set(new Date().getTime().toString())
+        outputScriptCls.set(ocls)
         try {
-          outputScript.update((o) => recursiveJSONStringify(result))
+          outputScript.set(recursiveJSONStringify(result))
           createSpanSelector(ocls)
           if ($outputScript.length / 1024 > 1000) {
             setTimeout(() => {
-              outputScript.update((o) => `{cleared:'to save memory'}`)
+              outputScript.set(`{cleared:'to save memory'}`)
             }, 15000)
           }
         } catch (e) {
@@ -86,14 +86,17 @@
     span.setAttribute("data-test", data)
     const parentElm = document.getElementById("span-container")
     if (parentElm) {
-      parentElm.innerHTML = ""
+      // Hapus semua child nodes alih-alih hanya mengganti textContent
+      while (parentElm.firstChild) {
+        parentElm.removeChild(parentElm.firstChild)
+      }
       parentElm.appendChild(span)
     }
   }
   const handleExitButton = (e: Event) => {
     console.log(`handlerExitButton`, { e })
     // runScript()
-    display.update((o) => "hidden")
+    display.set("hidden")
   }
   const handleExecButton = (e: Event) => {
     console.log(`handlerExecButton`, { e })

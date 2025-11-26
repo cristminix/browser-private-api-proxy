@@ -32,7 +32,7 @@ const onValidCoursePage = () => {
   // console.log({ slug })
 
   // appInstance.setState({ validCoursePage, slug })
-  if (appInstance) {
+  if (appInstance && typeof appInstance.setValidCoursePage === "function" && typeof appInstance.setUrlPath === "function") {
     appInstance.setValidCoursePage(true)
     appInstance.setUrlPath(urlPath)
   }
@@ -40,12 +40,12 @@ const onValidCoursePage = () => {
   // pauseVideoPlayer()
 }
 const onInvalidCoursePage = () => {
-  if (appInstance) appInstance.setValidCoursePage(false)
+  if (appInstance && typeof appInstance.setValidCoursePage === "function") appInstance.setValidCoursePage(false)
 }
 const main = async () => {
   attachRouteChangesEvent(async (path) => {
     urlPath = path
-    // console.log(appInstance, `URL changed to ${path}`)
+    console.log(appInstance, `URL changed to ${path}`)
 
     // const validCoursePage = isCoursePage()
     // if (!validCoursePage) {
@@ -59,13 +59,30 @@ const main = async () => {
     // }
   })
   createAppRootElement(containerId, containerRootId)
-  waitForElm(`#${containerRootId}`).then((el) => {
-    appInstance = new App({
-      props: {
-        containerId: appContainerId,
-      },
 
-      target: el!,
+  // Tambahkan delay kecil untuk memastikan DOM benar-benar siap
+  setTimeout(() => {
+    waitForElm(`#${containerRootId}`).then((el) => {
+      if (el && el instanceof Element) {
+        // Pastikan props tidak undefined
+        const appProps = {
+          containerId: appContainerId || "content-script-app",
+        }
+
+        try {
+          // Pastikan App constructor dipanggil dengan benar
+          appInstance = new App({
+            target: el,
+            props: appProps,
+          })
+        } catch (error) {
+          console.error("Error creating App instance:", error)
+          console.error("Props passed:", appProps)
+        }
+      } else {
+        console.error("Failed to find element with id:", containerRootId, "Element:", el)
+      }
     })
-  })
+  }, 100)
 }
+// initApp()

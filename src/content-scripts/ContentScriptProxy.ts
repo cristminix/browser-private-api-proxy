@@ -1,9 +1,9 @@
-import { createRandCls } from "@/global/fn/createRandCls"
-import { onMessage } from "@/global/fn/onMessage"
+import { createRandCls } from "../global/fn/createRandCls"
+import { onMessage } from "../global/fn/onMessage"
 import type { InputScriptInterface, OutputScriptContentCallback } from "./types"
-import { sendMessage } from "@/global/fn/sendMessage"
-import { waitForElm } from "@/global/fn/waitForElm"
-import type { MessageEventInterface } from "@/global/classes/types"
+import { sendMessage } from "../global/fn/sendMessage"
+import { waitForElm } from "../global/fn/waitForElm"
+import type { MessageEventInterface } from "../global/classes/types"
 
 class ContentScriptProxy {
   constructor() {

@@ -1,10 +1,17 @@
-// Disable Trusted Types to prevent TrustedHTML errors from external libraries
+// Ensure Trusted Types policy is set up to prevent TrustedHTML errors
 if ((window as any).trustedTypes && (window as any).trustedTypes.createPolicy) {
-  ;(window as any).trustedTypes.createPolicy("default", {
-    createHTML: (string: string) => string,
-    createScript: (string: string) => string,
-    createScriptURL: (string: string) => string,
-  })
+  try {
+    // Check if a policy with this name already exists
+    if (!(window as any).trustedTypes.getPolicy("default")) {
+      ;(window as any).trustedTypes.createPolicy("default", {
+        createHTML: (string: string) => string,
+        createScript: (string: string) => string,
+        createScriptURL: (string: string) => string,
+      })
+    }
+  } catch (e) {
+    // Policy might already exist, which is fine
+  }
 }
 
 // Simple fetch and XHR interceptor without DOM dependencies
@@ -12,7 +19,7 @@ if ((window as any).trustedTypes && (window as any).trustedTypes.createPolicy) {
 import { interceptFetchCall } from "./fn/interceptFetchCall"
 import { interceptXHRCall } from "./fn/interceptXHRCall"
 
-const bridge = {} //new ProxyBridge()
+const bridge: any = {} //new ProxyBridge()
 
 // Immediately execute when script is loaded (no DOM dependencies)
 if (!(window as any).fetchInterceptorInjected) {
