@@ -1,7 +1,8 @@
-import type { ProxyBridge } from "@/global/classes/ProxyBridge"
+import type { ProxyBridge } from "../../global/classes/ProxyBridge"
 import { Mutex } from "../../global/classes/Mutex"
 import { delay } from "../../utils"
 import * as idb from "idb-keyval"
+import { triggerChangeEvent } from "../../global/fn/triggerInputElChangeEvent"
 
 // Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
 const triggerMutex = new Mutex()
@@ -90,31 +91,46 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
             })
           }
           console.log({ shouldCallOriginalXHR, watcher: this._watcher })
-
+          let matchGeminiEndpoint = false
           // Panggil XHR palsu jika tidak diintercept
-          if (!shouldCallOriginalXHR && this._watcher) {
-            if (bridge.appName === "zai-proxy" || bridge.appName === "deepseek-proxy") {
-              // Gunakan URL palsu untuk semua URL, bukan hanya yang cocok dengan watcher
-              if (this._watcher.replaceUrl.trim().length > 0) {
-                // Buat XHR baru dengan URL palsu
-                const fakeXHR = new OriginalXHR()
-                fakeXHR.open(this._method, this._watcher.replaceUrl, true)
-
-                // Salin header
-                for (const [key, value] of Object.entries(this._requestHeaders)) {
-                  fakeXHR.setRequestHeader(key, value)
-                }
-
-                // Kirim request palsu
-
-                return fakeXHR.send(this._requestBody)
-                // }
-                // return fakeXHR
-              }
-            }
+          // if (!shouldCallOriginalXHR) {
+          const matchUrl = "/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
+          if (this._url?.includes(matchUrl)) {
+            console.log("MATCH GEMINI CHAT ENDPOINT")
+            matchGeminiEndpoint = true
+            const targetEl = document.getElementById("output-script") as any
+            triggerChangeEvent(targetEl)
+            targetEl.value = ""
           }
+          // }
 
           // Set up event listeners to capture the response
+          let partialResponseData = ""
+          this.addEventListener("readystatechange", async () => {
+            // Check if readyState is LOADING (3) to capture partial data
+            if (this.readyState === 3) {
+              // For streaming responses, we can capture partial data here
+              if (this.responseType === "" || this.responseType === "text") {
+                try {
+                  const partialText = this.responseText
+                  if (partialText && partialText.length > partialResponseData.length && matchGeminiEndpoint) {
+                    // We have new partial data
+                    const newData = partialText.substring(partialResponseData.length)
+                    partialResponseData = partialText
+                    console.log("Partial XHR data received:", newData)
+                    const targetEl = document.getElementById("output-script") as any
+                    const oldValue = targetEl.value
+
+                    targetEl.value = `${oldValue}\n\n${newData}`
+                    triggerChangeEvent(targetEl)
+                  }
+                } catch (e) {
+                  console.warn("Could not read partial XHR response:", e)
+                }
+              }
+            }
+          })
+
           this.addEventListener("load", async () => {
             if (this._watcher) {
               if (this._url?.includes(this._watcher.matchSourceUrl)) {
@@ -139,7 +155,9 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
               // Get response data
               let responseData: any = this.response
-
+              if (matchGeminiEndpoint) {
+                console.log("BILLIE EILISH", this.responseType)
+              }
               // If response is JSON, try to parse it
               if (this.responseType === "" || this.responseType === "text") {
                 try {
@@ -160,7 +178,13 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
                 headers: responseHeaders,
                 data: responseData,
               }
+              if (matchGeminiEndpoint) {
+                console.log("JUSTIN BIEBER", responseData)
+                const targetEl = document.getElementById("output-script") as any
 
+                targetEl.value = `${responseData}\n\n[DONE]`
+                triggerChangeEvent(targetEl)
+              }
               if (this._watcher) {
                 if (this._url?.includes(this._watcher.matchSourceUrl)) {
                   this._watcher.setPhase("DATA", response)
