@@ -1,5 +1,4 @@
 import type { PlatformStrategy } from "../interfaces/PlatformStrategy"
-import jquery from "jquery"
 import { delay } from "../../utils"
 import * as idb from "idb-keyval"
 import { Mutex } from "../classes/Mutex"
@@ -33,31 +32,24 @@ export class ZaiStrategy implements PlatformStrategy {
   /**
    * Menangani permintaan chat dari server
    */
-  async handleChat(
-    payload: any,
-    requestId: string,
-    bridge: ProxyBridge
-  ): Promise<void> {
+  async handleChat(payload: any, requestId: string, bridge: ProxyBridge): Promise<void> {
     const { prompt } = payload
-    const chatInput = jquery("#chat-input")
-    const chatInputElem = chatInput[0]
-    const sendButton = jquery("#send-message-button")
+    const chatInput = document.querySelector("#chat-input") as HTMLInputElement
+    const sendButton = document.querySelector("#send-message-button") as HTMLElement
 
-    chatInput.val(prompt)
+    if (chatInput) {
+      chatInput.value = prompt
 
-    // Add event listeners to capture keystrokes and changes on the chat input
-    if (chatInputElem) {
-      triggerChangeEvent(chatInputElem as HTMLInputElement)
+      // Add event listeners to capture keystrokes and changes on the chat input
+      triggerChangeEvent(chatInput)
       await delay(2000)
-      sendButton.trigger("click")
+
+      if (sendButton) {
+        sendButton.click()
+      }
 
       // Menunggu respons fetch dengan timeout
-      await this.waitForFetchResponseEvent(
-        "/api/v2/chat/completions",
-        6000,
-        requestId,
-        bridge
-      )
+      await this.waitForFetchResponseEvent("/api/v2/chat/completions", 60000, requestId, bridge)
     }
   }
 
@@ -65,18 +57,41 @@ export class ZaiStrategy implements PlatformStrategy {
    * Menangani event new-chat dari server
    */
   handleNewChat(): void {
-    jquery("#sidebar-new-chat-button").trigger("click")
+    const newChatButton = document.querySelector("#sidebar-new-chat-button") as HTMLElement
+    if (newChatButton) {
+      newChatButton.click()
+    }
   }
 
   /**
    * Menangani event chat-reload dari server
    */
-  handleChatReload(): void {
-    jquery("#sidebar-new-chat-button").trigger("click")
-    setTimeout(() => {
-      // document.location.reload()
-      window.history.back()
-    }, 3000)
+  async handleChatReload(chatId: string | null | undefined = null) {
+    const currentLocation = document.location.href
+    const match = currentLocation.match(/\/c\/([a-f0-9-]+)/)
+    const currentChatId = match ? match[1] : null
+    //https://chat.z.ai/c/b9821e29-cdf0-4825-9554-4c6ec815b831
+    const chatUrl = `https://chat.z.ai/c/${chatId}`
+    const homeUrl = `https://chat.z.ai`
+
+    await delay(3000)
+    console.log("CHAT_RELOAD", chatId)
+
+    //
+    if (chatId === currentChatId) {
+      // history.pushState({}, "", homeUrl)
+      // window.dispatchEvent(new PopStateEvent("popstate"))
+      // await delay(1000)
+
+      // history.pushState({}, "", chatUrl)
+      // window.dispatchEvent(new PopStateEvent("popstate"))
+
+      document.location.reload()
+    } else if (chatId) {
+      document.location.href = `https://chat.z.ai/c/${chatId}`
+      // history.pushState({}, "", chatUrl)
+      // window.dispatchEvent(new PopStateEvent("popstate"))
+    }
   }
 
   /**
@@ -99,22 +114,12 @@ export class ZaiStrategy implements PlatformStrategy {
   /**
    * Menunggu respons fetch event (dipindahkan dari ProxyBridge)
    */
-  private async waitForFetchResponseEvent(
-    matchSourceUrl: string,
-    timeout: number,
-    requestId: string,
-    bridge: ProxyBridge
-  ): Promise<any> {
+  private async waitForFetchResponseEvent(matchSourceUrl: string, timeout: number, requestId: string, bridge: ProxyBridge): Promise<any> {
     try {
       // Import secara dinamis untuk menghindari circular dependency
 
       // Create a new watcher instance
-      const watcher = new FetchResponseEventWatcher(
-        matchSourceUrl,
-        timeout,
-        requestId,
-        this.getReplaceUrl()
-      )
+      const watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout, requestId, this.getReplaceUrl())
       bridge.setWatcher(watcher)
       // Wait for the watcher to complete
       const data = await watcher.watch()
@@ -128,17 +133,12 @@ export class ZaiStrategy implements PlatformStrategy {
           bridge.unsetWatcher()
         }
       } else {
-        console.warn(
-          `No data received for ${matchSourceUrl} within timeout period`
-        )
+        console.warn(`No data received for ${matchSourceUrl} within timeout period`)
       }
 
       return data
     } catch (error) {
-      console.error(
-        `Error in waitForFetchResponseEvent for ${matchSourceUrl}:`,
-        error
-      )
+      console.error(`Error in waitForFetchResponseEvent for ${matchSourceUrl}:`, error)
       throw error
     }
   }

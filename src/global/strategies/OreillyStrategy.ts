@@ -1,5 +1,4 @@
 import type { PlatformStrategy } from "../interfaces/PlatformStrategy"
-import jquery from "jquery"
 import { delay } from "../../utils"
 
 /**

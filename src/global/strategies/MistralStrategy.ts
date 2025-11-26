@@ -1,5 +1,4 @@
 import type { PlatformStrategy } from "../interfaces/PlatformStrategy"
-import jquery from "jquery"
 import { delay } from "../../utils"
 import * as idb from "idb-keyval"
 import { Mutex } from "../classes/Mutex"
@@ -33,25 +32,22 @@ export class MistralStrategy implements PlatformStrategy {
   /**
    * Menangani permintaan chat dari server
    */
-  async handleChat(
-    payload: any,
-    requestId: string,
-    bridge: ProxyBridge
-  ): Promise<void> {
+  async handleChat(payload: any, requestId: string, bridge: ProxyBridge): Promise<void> {
     const { prompt } = payload
-    const chatInput = jquery("form div[contenteditable=true]")
-    const chatInputElem = chatInput[0]
+    const chatInput = document.querySelector("form div[contenteditable=true]") as HTMLDivElement
 
-    chatInput.text(prompt)
+    if (chatInput) {
+      chatInput.textContent = prompt
 
-    // Add event listeners to capture keystrokes and changes on the chat input
-    if (chatInputElem) {
-      // triggerChangeEvent(chatInputElem as HTMLInputElement)
+      // Add event listeners to capture keystrokes and changes on the chat input
+      // triggerChangeEvent(chatInput as HTMLInputElement)
       await delay(1000)
-      const sendButton = jquery("form button[type=submit]")
+      const sendButton = document.querySelector("form button[type=submit]") as HTMLButtonElement
 
       console.log(sendButton)
-      sendButton.trigger("click")
+      if (sendButton) {
+        sendButton.click()
+      }
 
       // Menunggu respons fetch dengan timeout
       await this.waitForFetchResponseEvent("/api/chat", 6000, requestId, bridge)
@@ -62,14 +58,20 @@ export class MistralStrategy implements PlatformStrategy {
    * Menangani event new-chat dari server
    */
   handleNewChat(): void {
-    jquery("#sidebar-new-chat-button").trigger("click")
+    const newChatButton = document.querySelector("#sidebar-new-chat-button") as HTMLElement
+    if (newChatButton) {
+      newChatButton.click()
+    }
   }
 
   /**
    * Menangani event chat-reload dari server
    */
   handleChatReload(): void {
-    jquery("#sidebar-new-chat-button").trigger("click")
+    const newChatButton = document.querySelector("#sidebar-new-chat-button") as HTMLElement
+    if (newChatButton) {
+      newChatButton.click()
+    }
     setTimeout(() => {
       // document.location.reload()
       window.history.back()
@@ -96,22 +98,12 @@ export class MistralStrategy implements PlatformStrategy {
   /**
    * Menunggu respons fetch event (dipindahkan dari ProxyBridge)
    */
-  private async waitForFetchResponseEvent(
-    matchSourceUrl: string,
-    timeout: number,
-    requestId: string,
-    bridge: ProxyBridge
-  ): Promise<any> {
+  private async waitForFetchResponseEvent(matchSourceUrl: string, timeout: number, requestId: string, bridge: ProxyBridge): Promise<any> {
     try {
       // Import secara dinamis untuk menghindari circular dependency
 
       // Create a new watcher instance
-      const watcher = new FetchResponseEventWatcher(
-        matchSourceUrl,
-        timeout,
-        requestId,
-        this.getReplaceUrl()
-      )
+      const watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout, requestId, this.getReplaceUrl())
       bridge.setWatcher(watcher)
       // Wait for the watcher to complete
       const data = await watcher.watch("DATA")
@@ -125,17 +117,12 @@ export class MistralStrategy implements PlatformStrategy {
           bridge.unsetWatcher()
         }
       } else {
-        console.warn(
-          `No data received for ${matchSourceUrl} within timeout period`
-        )
+        console.warn(`No data received for ${matchSourceUrl} within timeout period`)
       }
 
       return data
     } catch (error) {
-      console.error(
-        `Error in waitForFetchResponseEvent for ${matchSourceUrl}:`,
-        error
-      )
+      console.error(`Error in waitForFetchResponseEvent for ${matchSourceUrl}:`, error)
       throw error
     }
   }

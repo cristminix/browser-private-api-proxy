@@ -3,7 +3,6 @@ import { Mutex } from "../../global/classes/Mutex"
 import { delay } from "../../utils"
 import * as idb from "idb-keyval"
 import { streamToResponse } from "./streamToResponse"
-import jquery from "jquery"
 // Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
 const triggerMutex = new Mutex()
 

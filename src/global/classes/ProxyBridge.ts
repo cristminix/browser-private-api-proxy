@@ -29,7 +29,11 @@ export class ProxyBridge {
   watcher: FetchResponseEventWatcher | null = null
   private strategy: PlatformStrategy
 
-  constructor() {
+  constructor(socketUrl?: string) {
+    if (socketUrl) {
+      this.socketUrl = socketUrl
+    }
+
     this.socket = io(this.socketUrl, {
       // Disable automatic reconnection to allow the program to exit when server is not available
       autoConnect: true,
@@ -50,13 +54,7 @@ export class ProxyBridge {
    */
   private initializeStrategy(): PlatformStrategy {
     const hostname = window.location.hostname
-    const strategies: PlatformStrategy[] = [
-      new ZaiStrategy(),
-      new DeepSeekStrategy(),
-      new MistralStrategy(),
-      new OreillyStrategy(),
-      new GenericStrategy(),
-    ]
+    const strategies: PlatformStrategy[] = [new ZaiStrategy(), new DeepSeekStrategy(), new MistralStrategy(), new OreillyStrategy(), new GenericStrategy()]
 
     for (const strategy of strategies) {
       if (strategy.isMatch(hostname)) {
@@ -180,13 +178,7 @@ export class ProxyBridge {
         this.onMessage(data)
 
         if (data && typeof data === "object" && "type" in data) {
-          if (
-            data.type === "pong" &&
-            message &&
-            typeof message === "object" &&
-            "type" in message &&
-            message.type === "ping"
-          ) {
+          if (data.type === "pong" && message && typeof message === "object" && "type" in message && message.type === "ping") {
             resolve(data)
             return
           }

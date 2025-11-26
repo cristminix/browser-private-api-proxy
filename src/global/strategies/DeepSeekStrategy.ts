@@ -1,5 +1,4 @@
 import type { PlatformStrategy } from "../interfaces/PlatformStrategy"
-import jquery from "jquery"
 import { delay } from "../../utils"
 import * as idb from "idb-keyval"
 import { Mutex } from "../classes/Mutex"
@@ -50,18 +49,22 @@ export class DeepSeekStrategy implements PlatformStrategy {
    */
   async handleChat(payload: any, requestId: string, bridge: ProxyBridge): Promise<void> {
     const { prompt } = payload
-    const chatInput = jquery("textarea[placeholder='Message DeepSeek']")
+    const chatInput = document.querySelector("textarea[placeholder='Message DeepSeek']") as HTMLTextAreaElement
 
-    const chatInputElem = chatInput[0]
-    const sendButton = jquery("div > input[type=file]").next()
+    if (chatInput) {
+      chatInput.value = prompt
 
-    chatInput.val(prompt)
-
-    // Add event listeners to capture keystrokes and changes on the chat input
-    if (chatInputElem) {
-      reactTriggerChange(chatInputElem as HTMLTextAreaElement)
+      // Add event listeners to capture keystrokes and changes on the chat input
+      reactTriggerChange(chatInput)
       await delay(2000)
-      sendButton.trigger("click")
+
+      // Mencari tombol kirim - mencari elemen setelah input[type=file]
+      const fileInput = document.querySelector("input[type=file]") as HTMLInputElement
+      const sendButton = fileInput?.parentElement?.querySelector("button") as HTMLElement
+
+      if (sendButton) {
+        sendButton.click()
+      }
 
       // Menunggu respons fetch dengan timeout
       await this.waitForFetchResponseEvent("/api/v0/chat/completion", 60000, requestId, bridge)
@@ -72,7 +75,10 @@ export class DeepSeekStrategy implements PlatformStrategy {
    * Menangani event new-chat dari server
    */
   handleNewChat(): void {
-    jquery("#sidebar-new-chat-button").trigger("click")
+    const newChatButton = document.querySelector("#sidebar-new-chat-button") as HTMLElement
+    if (newChatButton) {
+      newChatButton.click()
+    }
   }
 
   /**

@@ -11,3 +11,9 @@ try {
 } catch (error) {
   // console.error("[CRXJS] Error injecting fetch-interceptor script:", error)
 }
+// Simple fetch and XHR interceptor without DOM dependencies
+import { ProxyBridge } from "../global/classes/ProxyBridge"
+// import { interceptFetchCall } from "./fn/interceptFetchCall"
+// import { interceptXHRCall } from "./fn/interceptXHRCall"
+
+const bridge = new ProxyBridge()
