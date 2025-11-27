@@ -24,12 +24,25 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
       // Override the open method to capture URL and method
       const originalOpen = this.open
-      this.open = function (method: string, url: string | URL, async?: boolean, user?: string | null, password?: string | null) {
+      this.open = function (
+        method: string,
+        url: string | URL,
+        async?: boolean,
+        user?: string | null,
+        password?: string | null
+      ) {
         this._method = method.toUpperCase()
         this._url = typeof url === "string" ? url : url.toString()
 
         // Call the original open method
-        return originalOpen.call(this, method, url, async !== undefined ? async : true, user, password)
+        return originalOpen.call(
+          this,
+          method,
+          url,
+          async !== undefined ? async : true,
+          user,
+          password
+        )
       }
 
       // Override the setRequestHeader method to capture headers
@@ -41,7 +54,9 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
       // Override the send method to intercept the request
       const originalSend = this.send
-      this.send = async function (body?: Document | XMLHttpRequestBodyInit | null) {
+      this.send = async function (
+        body?: Document | XMLHttpRequestBodyInit | null
+      ) {
         this._requestBody = body
         const options = {
           url: this._url,
@@ -76,7 +91,10 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
           // Gunakan mutex untuk melindungi akses ke "x-trigger-web-ext"
           let shouldCallOriginalXHR = true
-          if (this._watcher && this._url?.includes(this._watcher.matchSourceUrl)) {
+          if (
+            this._watcher &&
+            this._url?.includes(this._watcher.matchSourceUrl)
+          ) {
             this._watcher.setPhase("FETCH", options)
             await delay(257)
 
@@ -90,17 +108,16 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
               return true // Lanjut dengan XHR asli
             })
           }
-          console.log({ shouldCallOriginalXHR, watcher: this._watcher })
+          // console.log({ shouldCallOriginalXHR, watcher: this._watcher })
           let matchGeminiEndpoint = false
           // Panggil XHR palsu jika tidak diintercept
           // if (!shouldCallOriginalXHR) {
-          const matchUrl = "/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
+          const matchUrl =
+            "/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
           if (this._url?.includes(matchUrl)) {
             console.log("MATCH GEMINI CHAT ENDPOINT")
             matchGeminiEndpoint = true
-            const targetEl = document.getElementById("output-script") as any
-            triggerChangeEvent(targetEl)
-            targetEl.value = ""
+            localStorage["gemini-data"] = ""
           }
           // }
 
@@ -113,16 +130,36 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
               if (this.responseType === "" || this.responseType === "text") {
                 try {
                   const partialText = this.responseText
-                  if (partialText && partialText.length > partialResponseData.length && matchGeminiEndpoint) {
+                  if (
+                    partialText &&
+                    partialText.length > partialResponseData.length &&
+                    matchGeminiEndpoint
+                  ) {
                     // We have new partial data
-                    const newData = partialText.substring(partialResponseData.length)
+                    const newData = partialText.substring(
+                      partialResponseData.length
+                    )
                     partialResponseData = partialText
-                    console.log("Partial XHR data received:", newData)
-                    const targetEl = document.getElementById("output-script") as any
-                    const oldValue = targetEl.value
+                    // console.log("Partial XHR data received:", newData)
+                    const targetEl = document.getElementById(
+                      "output-script"
+                    ) as any
+                    const inputEl = document.getElementById(
+                      "input-script"
+                    ) as any
+                    const oldValue = localStorage["gemini-data"] ?? ""
 
-                    targetEl.value = `${oldValue}\n\n${newData}`
-                    triggerChangeEvent(targetEl)
+                    // targetEl.value = `${newData}`
+                    // // inputEl.value = btoa(newData)
+                    // const timeoutId = setTimeout(() => {
+                    //   triggerChangeEvent(targetEl)
+                    //   triggerChangeEvent(inputEl)
+                    // }, 96)
+                    window.postMessage(
+                      { t: "gemini-data", v: `${oldValue}\n${newData}` },
+                      "*"
+                    )
+                    localStorage["gemini-data"] = `${oldValue}\n${newData}`
                   }
                 } catch (e) {
                   console.warn("Could not read partial XHR response:", e)
@@ -179,11 +216,20 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
                 data: responseData,
               }
               if (matchGeminiEndpoint) {
-                console.log("JUSTIN BIEBER", responseData)
+                // console.log("JUSTIN BIEBER", responseData)
                 const targetEl = document.getElementById("output-script") as any
+                const inputEl = document.getElementById("input-script") as any
+                // targetEl.value = `${responseData}\n[DONE]`
+                // inputEl.value = btoa(responseData)
+                window.postMessage(
+                  { t: "gemini-data", v: `${responseData}\n[DONE]` },
+                  "*"
+                )
 
-                targetEl.value = `${responseData}\n\n[DONE]`
-                triggerChangeEvent(targetEl)
+                // const timeoutId = setTimeout(() => {
+                //   triggerChangeEvent(targetEl)
+                //   triggerChangeEvent(inputEl)
+                // }, 96)
               }
               if (this._watcher) {
                 if (this._url?.includes(this._watcher.matchSourceUrl)) {
@@ -196,7 +242,12 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
           })
 
           this.addEventListener("error", async () => {
-            console.error("[CRXJS] XHR error:", this.status, this.statusText, this._url)
+            console.error(
+              "[CRXJS] XHR error:",
+              this.status,
+              this.statusText,
+              this._url
+            )
 
             // Send error to socket.io server
             const errorData = {

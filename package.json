@@ -5,12 +5,15 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build-script-inject": "esbuild src/content/fetch-injector.ts  --sourcemap --minify --bundle --outfile=src/content/dist/fetch-injector.js --loader:.js=jsx",
+    "bsi-src": "esbuild src/content/fetch-injector.ts  --sourcemap --minify --bundle --outfile=src/content/dist/fetch-injector.js --loader:.js=jsx",
+    "bsi-dst": "esbuild src/content/fetch-injector.ts --sourcemap  --minify --bundle --outfile=dist/src/content/dist/fetch-injector.js --loader:.js=jsx",
     "bsi-watch-src": "esbuild src/content/fetch-injector.ts --sourcemap --watch --minify --bundle --outfile=src/content/dist/fetch-injector.js --loader:.js=jsx",
     "bsi-app-watch": "node build-svelte.mjs src/content-scripts/content-inject.ts --outfile dist/src/content-scripts/inject/dist/inject.js --watch",
+    "bsi-app-dst": "node build-svelte.mjs src/content-scripts/content-inject.ts --outfile dist/src/content-scripts/inject/dist/inject.js",
+    "bsi-app-src": "node build-svelte.mjs src/content-scripts/content-inject.ts --outfile src/content-scripts/inject/dist/inject.js",
     "bsi-app": "node build-svelte.mjs src/content-scripts/content-inject.ts --outfile src/content-scripts/inject/dist/inject.js ",
     "bsi-watch": "esbuild src/content/fetch-injector.ts  --sourcemap --watch --minify --bundle --outfile=dist/src/content/dist/fetch-injector.js --loader:.js=jsx",
-    "build": "pnpm run build-script-inject && vite build",
+    "build": "pnpm run bsi-app-dst && pnpm run bsi-app-src && pnpm run bsi-src &&pnpm run bsi-dst && vite build",
     "build-svelte": "node build-svelte.mjs src/content-scripts/inject/index.ts --outfile dist/src/content-scripts/inject/dist/inject.js",
     "build-svelte-watch": "node build-svelte.mjs src/content-scripts/inject/index.ts --outfile dist/src/content-scripts/inject/dist/inject.js --watch"
   },
@@ -18,19 +21,18 @@
     "idb-keyval": "^6.2.2",
     "jquery": "^3.7.1",
     "react-trigger-change": "^1.0.2",
-    "socket.io-client": "^4.8.1" 
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.3",
-   "@sveltejs/vite-plugin-svelte": "^3.1.1",
-       "svelte": "^4.2.18",
+    "@sveltejs/vite-plugin-svelte": "^3.1.1",
+    "svelte": "^4.2.18",
     "svelte-check": "^3.8.1",
     "@tsconfig/svelte": "^5.0.4",
     "@types/chrome": "^0.1.1",
     "@types/jquery": "^3.5.33",
     "@types/node": "^24.10.1",
     "esbuild": "^0.27.0",
-    
     "typescript": "~5.8.3",
     "vite": "^7.0.5",
     "vite-plugin-zip-pack": "^1.2.4"

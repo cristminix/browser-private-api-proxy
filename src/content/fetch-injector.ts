@@ -25,7 +25,7 @@ const bridge: any = {} //new ProxyBridge()
 if (!(window as any).fetchInterceptorInjected) {
   // console.log("[CRXJS] Fetch interceptor injected into page DOM")
   // if (document.location.hostname.includes("z.ai")) {
-  interceptFetchCall(bridge)
+  // interceptFetchCall(bridge)
   interceptXHRCall(bridge)
   ;(window as any).fetchInterceptorInjected = true
   // console.log("[CRXJS] Fetch interception enabled via DOM injection")
