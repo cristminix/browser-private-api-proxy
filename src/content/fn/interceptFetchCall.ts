@@ -2,7 +2,7 @@ import type { ProxyBridge } from "@/global/classes/ProxyBridge"
 import { Mutex } from "../../global/classes/Mutex"
 import { delay } from "../../utils"
 import * as idb from "idb-keyval"
-import { streamToResponse } from "./streamToResponse"
+// import { streamToResponse } from "./streamToResponse"
 // Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
 const triggerMutex = new Mutex()
 
@@ -99,7 +99,7 @@ export async function interceptFetchCall(bridge: ProxyBridge) {
           headers: Object.fromEntries(response.headers.entries()),
         })*/
         const updatePashe = async () => {
-          const streamResponse = await streamToResponse(response)
+          // const streamResponse = await streamToResponse(response)
           // Send response data to socket.io server without body
           const responseData = {
             type: "fetch_response",
@@ -108,7 +108,7 @@ export async function interceptFetchCall(bridge: ProxyBridge) {
             status: response.status,
             statusText: response.statusText,
             headers: Object.fromEntries(response.headers.entries()),
-            data: streamResponse,
+            data: null,
           }
           // bridge.sendMessage(responseData)
           if (watcher) {

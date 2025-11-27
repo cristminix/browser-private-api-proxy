@@ -57,7 +57,19 @@ export class FetchResponseEventWatcher {
     return new Promise((resolve, reject) => {
       this.timeoutId = setTimeout(() => {
         if (this.phase === "INIT") {
-          // fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener!)
+          // Cleanup observers and event listeners on timeout
+          const targetEl = document.getElementById("output-script") as HTMLTextAreaElement
+          if (targetEl) {
+            if ((targetEl as any).__mutationObserver) {
+              ;(targetEl as any).__mutationObserver.disconnect()
+            }
+            if ((targetEl as any).__contentObserver) {
+              ;(targetEl as any).__contentObserver.disconnect()
+            }
+            if ((targetEl as any).__inputHandler) {
+              targetEl.removeEventListener("input", (targetEl as any).__inputHandler)
+            }
+          }
           reject(new Error(`Timeout waiting for fetch response from ${this.matchSourceUrl}`))
         }
       }, this.timeout)
@@ -100,10 +112,25 @@ export class FetchResponseEventWatcher {
           console.log("Value changed in output-script change callback:", targetEl.value)
           if (!targetEl.value.includes("[DONE]")) {
             this.setPhase("RESPONSE", { content: targetEl.value })
-            bridge.socket.emit("answer-stream", { content: targetEl.value, requestId: this.requestId })
+            if (bridge.socket) {
+              bridge.socket.emit("answer-stream", { content: targetEl.value, requestId: this.requestId })
+            }
           } else {
             this.setPhase("DATA", { content: targetEl.value })
-            bridge.socket.emit("answer-stream", { content: targetEl.value, requestId: this.requestId })
+            if (bridge.socket) {
+              bridge.socket.emit("answer-stream", { content: targetEl.value, requestId: this.requestId })
+            }
+
+            // Cleanup observers and event listeners
+            if ((targetEl as any).__mutationObserver) {
+              ;(targetEl as any).__mutationObserver.disconnect()
+            }
+            if ((targetEl as any).__contentObserver) {
+              ;(targetEl as any).__contentObserver.disconnect()
+            }
+            if ((targetEl as any).__inputHandler) {
+              targetEl.removeEventListener("input", (targetEl as any).__inputHandler)
+            }
 
             resolve(await this.getPhaseData())
           }
@@ -124,7 +151,9 @@ export class FetchResponseEventWatcher {
       // Set up timeout
       this.timeoutId = setTimeout(() => {
         if (this.phase === "INIT") {
-          fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener!)
+          if (this.eventListener) {
+            fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener)
+          }
           reject(new Error(`Timeout waiting for fetch response from ${this.matchSourceUrl}`))
         }
       }, this.timeout)
@@ -140,14 +169,18 @@ export class FetchResponseEventWatcher {
         switch (phase) {
           case "ERROR":
             if (this.timeoutId) clearTimeout(this.timeoutId)
-            fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener!)
+            if (this.eventListener) {
+              fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener)
+            }
             reject(new Error(`Error in fetch response: ${JSON.stringify(data)}`))
             break
           case "DATA":
           case "FETCH":
             if (phase === breakOnPhase) {
               if (this.timeoutId) clearTimeout(this.timeoutId)
-              fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener!)
+              if (this.eventListener) {
+                fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener)
+              }
               if (this.phaseData) {
                 resolve(this.phaseData)
               } else {
@@ -167,9 +200,9 @@ export class FetchResponseEventWatcher {
 
       // Check if there's already data in IndexedDB
       this.getPhaseData().then((existingData) => {
-        if (existingData && existingData.phase) {
+        if (existingData && existingData.phase && this.eventListener) {
           // Simulate an event for existing data
-          this.eventListener!({ phase: existingData.phase, data: existingData })
+          this.eventListener({ phase: existingData.phase, data: existingData })
         }
       })
     })
