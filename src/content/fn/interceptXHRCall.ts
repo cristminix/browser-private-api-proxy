@@ -24,12 +24,48 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
       // Override the open method to capture URL and method
       const originalOpen = this.open
-      this.open = function (method: string, url: string | URL, async?: boolean, user?: string | null, password?: string | null) {
+      this.open = function (
+        method: string,
+        url: string | URL,
+        async?: boolean,
+        user?: string | null,
+        password?: string | null
+      ) {
         this._method = method.toUpperCase()
         this._url = typeof url === "string" ? url : url.toString()
+        let matchGeminiEndpoint = false
+        let shouldCallOriginalXHR = true
 
+        const matchUrl =
+          "/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
+        let newUrl = url
+        if (this._url?.includes(matchUrl)) {
+          console.log("MATCH GEMINI CHAT ENDPOINT 88")
+          matchGeminiEndpoint = true
+          newUrl = "http://localhost:4001/api/fake-stream-chat?platform=gemini"
+          // const options = {
+          //   url ,
+          //   method: this._method,
+          //   headers: this._requestHeaders,
+          //   body: this._requestBody,
+          // }
+          // const payload = {
+          //   data: options,
+          //   phase: "FETCH",
+          //   fn: "setPhase",
+          // }
+          // window.postMessage({ type: "intercept-xhr", payload }, "*")
+          // await delay(257)
+        }
         // Call the original open method
-        return originalOpen.call(this, method, url, async !== undefined ? async : true, user, password)
+        return originalOpen.call(
+          this,
+          method,
+          newUrl,
+          async !== undefined ? async : true,
+          user,
+          password
+        )
       }
 
       // Override the setRequestHeader method to capture headers
@@ -41,7 +77,9 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
       // Override the send method to intercept the request
       const originalSend = this.send
-      this.send = async function (body?: Document | XMLHttpRequestBodyInit | null) {
+      this.send = async function (
+        body?: Document | XMLHttpRequestBodyInit | null
+      ) {
         this._requestBody = body
         const options = {
           url: this._url,
@@ -76,9 +114,10 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
           let matchGeminiEndpoint = false
           let shouldCallOriginalXHR = true
 
-          const matchUrl = "/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
+          const matchUrl =
+            "/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
           if (this._url?.includes(matchUrl)) {
-            console.log("MATCH GEMINI CHAT ENDPOINT")
+            console.log("MATCH GEMINI CHAT ENDPOINT 00")
             matchGeminiEndpoint = true
           }
           if (matchGeminiEndpoint) {
@@ -91,6 +130,10 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
             window.postMessage({ type: "intercept-xhr", payload }, "*")
             await delay(257)
           }
+          if (matchGeminiEndpoint) {
+            this._url =
+              "http://localhost:4001/api/fake-stream-chat?platform=gemini"
+          }
           // console.log(matchGeminiEndpoint)
           // Set up event listeners to capture the response
           let partialResponseData = ""
@@ -101,9 +144,14 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
               if (this.responseType === "" || this.responseType === "text") {
                 try {
                   const partialText = this.responseText
-                  if (partialText && partialText.length > partialResponseData.length) {
+                  if (
+                    partialText &&
+                    partialText.length > partialResponseData.length
+                  ) {
                     // We have new partial data
-                    const newData = partialText.substring(partialResponseData.length)
+                    const newData = partialText.substring(
+                      partialResponseData.length
+                    )
                     partialResponseData = partialText
                     if (matchGeminiEndpoint) {
                       const payload = {
@@ -111,7 +159,10 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
                         phase: "STREAM",
                         fn: "setPhase",
                       }
-                      window.postMessage({ type: "intercept-xhr", payload }, "*")
+                      window.postMessage(
+                        { type: "intercept-xhr", payload },
+                        "*"
+                      )
                     }
                   }
                 } catch (e) {
@@ -175,7 +226,12 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
           })
 
           this.addEventListener("error", async () => {
-            console.error("[CRXJS] XHR error:", this.status, this.statusText, this._url)
+            console.error(
+              "[CRXJS] XHR error:",
+              this.status,
+              this.statusText,
+              this._url
+            )
 
             // Send error to socket.io server
             const errorData = {
