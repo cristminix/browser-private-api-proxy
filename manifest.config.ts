@@ -16,17 +16,13 @@ export default defineManifest({
   },
   content_scripts: [
     {
-      js: ["src/content/main.ts", "src/content-scripts/content.ts"],
+      js: ["src/content/main.ts"],
       matches: ["https://gemini.google.com/*"],
     },
   ],
   web_accessible_resources: [
     {
-      resources: [
-        "src/content/dist/fetch-injector.js",
-        "src/content-scripts/inject/dist/inject.js",
-        // "src/content-scripts/inject/dist/inject.css",
-      ],
+      resources: ["src/content/dist/fetch-injector.js"],
       matches: ["https://gemini.google.com/*"],
     },
   ],
@@ -35,7 +31,6 @@ export default defineManifest({
     default_path: "src/sidepanel/index.html",
   },
   content_security_policy: {
-    extension_pages:
-      "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' ws://localhost:4001 http://localhost:4001;",
+    extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' ws://localhost:4001 http://localhost:4001;",
   },
 })

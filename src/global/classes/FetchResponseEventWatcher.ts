@@ -4,14 +4,7 @@ import { EventEmitter } from "./EventEmitter"
 import type { ProxyBridge } from "./ProxyBridge"
 
 // Define types for better type safety
-export type FetchPhase =
-  | "INIT"
-  | "REQUEST"
-  | "HEADERS"
-  | "RESPONSE"
-  | "ERROR"
-  | "DATA"
-  | "FETCH"
+export type FetchPhase = "INIT" | "REQUEST" | "HEADERS" | "RESPONSE" | "ERROR" | "DATA" | "FETCH"
 
 export interface FetchPhaseData {
   phase?: FetchPhase
@@ -32,12 +25,7 @@ export class FetchResponseEventWatcher {
   private timeoutId: NodeJS.Timeout | null = null
   private eventListener: Function | null = null
 
-  constructor(
-    matchSourceUrl: string,
-    timeout: number,
-    requestId: string,
-    replaceUrl: string
-  ) {
+  constructor(matchSourceUrl: string, timeout: number, requestId: string, replaceUrl: string) {
     this.matchSourceUrl = matchSourceUrl
     this.timeout = timeout
     this.checksum = crc32(matchSourceUrl)
@@ -62,171 +50,44 @@ export class FetchResponseEventWatcher {
   async getPhaseData(): Promise<FetchPhaseData | undefined> {
     return idb.get(this.getPhaseKey())
   }
-  async messageListener(event: any, bridge: ProxyBridge) {
-    // Keamanan Penting: Selalu pastikan Anda memproses pesan hanya dari domain yang Anda harapkan
+  onMessageCallbacks_onces: any[] = []
+  addMessageCallback(handler: (watcher: FetchPhaseData, event: any) => any) {
+    this.onMessageCallbacks_onces.push(handler)
+  }
+  async messageListener(event: any) {
     if (event.origin !== window.location.origin) {
       return
     }
-
-    // Memeriksa properti untuk memastikan ini adalah pesan yang ditujukan
-    if (event.data && event.data.t === "gemini-data") {
-      const dataDiterima = event.data.v
-      // console.log("Data diterima dari website:", dataDiterima)
-      if (bridge.socket) {
-        bridge.socket.emit("answer-stream", {
-          content: dataDiterima,
-          requestId: this.requestId,
-        })
+    if (this.onMessageCallbacks_onces.length > 0) {
+      for (const callbackFn of this.onMessageCallbacks_onces) {
+        if (typeof callbackFn === "function") {
+          callbackFn.call(this, this, event)
+        }
       }
-
-      // Setelah menerima, content script dapat mengirimkannya lebih jauh ke background script jika perlu
-      // chrome.runtime.sendMessage(...)
+      this.onMessageCallbacks_onces = []
+    }
+    // Memeriksa properti untuk memastikan ini adalah pesan yang ditujukan
+    if (event.data && event.data.payload) {
+      const { data, phase, fn } = event.data.payload
+      if (fn === "setPhase") {
+        this.setPhase(phase, data)
+      }
     }
     // console.log(event.data)
   }
   messageListenerAdded = false
-  async watchGemini(bridge: ProxyBridge) {
-    // this.bridge = bridge
-    // window.removeEventListener("message", this.messageListener)
+
+  async watch(breakOnPhase: string = "FETCH"): Promise<FetchPhaseData> {
     if (!this.messageListenerAdded) {
       window.addEventListener(
         "message",
         (event) => {
-          this.messageListener(event, bridge)
+          this.messageListener(event)
         },
         false
       )
       this.messageListenerAdded = true
     }
-  }
-  async watchGeminiOld(bridge: ProxyBridge) {
-    console.log("WATCHING_GEMINI_RESPONSE")
-    this.phase = "INIT"
-
-    return new Promise((resolve, reject) => {
-      this.timeoutId = setTimeout(() => {
-        if (this.phase === "INIT") {
-          // Cleanup observers and event listeners on timeout
-          const targetEl = document.getElementById(
-            "output-script"
-          ) as HTMLTextAreaElement
-          if (targetEl) {
-            if ((targetEl as any).__mutationObserver) {
-              ;(targetEl as any).__mutationObserver.disconnect()
-            }
-            if ((targetEl as any).__contentObserver) {
-              ;(targetEl as any).__contentObserver.disconnect()
-            }
-            if ((targetEl as any).__inputHandler) {
-              targetEl.removeEventListener(
-                "input",
-                (targetEl as any).__inputHandler
-              )
-            }
-          }
-          reject(
-            new Error(
-              `Timeout waiting for fetch response from ${this.matchSourceUrl}`
-            )
-          )
-        }
-      }, this.timeout)
-
-      const targetEl = document.getElementById(
-        "output-script"
-      ) as HTMLTextAreaElement
-
-      if (targetEl) {
-        // Create a MutationObserver to monitor changes to the textarea value
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            if (
-              mutation.type === "attributes" &&
-              mutation.attributeName === "value"
-            ) {
-              console.log(
-                "Value changed in output-script attr:",
-                targetEl.value
-              )
-              handleInput()
-            }
-          })
-        })
-
-        // Also monitor for changes to the element's text content
-        const contentObserver = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            if (mutation.type === "childList") {
-              console.log("Content changed in output-script:", targetEl.value)
-            }
-          })
-        })
-
-        // Start observing attribute changes (for value attribute changes)
-        observer.observe(targetEl, {
-          attributes: true,
-          attributeFilter: ["value"],
-        })
-
-        // Start observing child list changes (for text content changes)
-        contentObserver.observe(targetEl, {
-          childList: true,
-        })
-
-        // Additionally, still listen for input events to catch user typing
-        const handleInput = async () => {
-          console.log(
-            "Value changed in output-script change callback:",
-            targetEl.value
-          )
-          const inputEl = document.getElementById("input-script") as any
-          console.log(inputEl.value)
-          if (!targetEl.value.includes("[DONE]")) {
-            this.setPhase("RESPONSE", { content: targetEl.value })
-            if (bridge.socket) {
-              bridge.socket.emit("answer-stream", {
-                content: targetEl.value,
-                requestId: this.requestId,
-              })
-            }
-          } else {
-            this.setPhase("DATA", { content: targetEl.value })
-            if (bridge.socket) {
-              bridge.socket.emit("answer-stream", {
-                content: targetEl.value,
-                requestId: this.requestId,
-              })
-            }
-
-            // Cleanup observers and event listeners
-            if ((targetEl as any).__mutationObserver) {
-              ;(targetEl as any).__mutationObserver.disconnect()
-            }
-            if ((targetEl as any).__contentObserver) {
-              ;(targetEl as any).__contentObserver.disconnect()
-            }
-            if ((targetEl as any).__inputHandler) {
-              targetEl.removeEventListener(
-                "input",
-                (targetEl as any).__inputHandler
-              )
-            }
-
-            resolve(await this.getPhaseData())
-          }
-        }
-        // Store observer references if needed for later cleanup
-        ;(targetEl as any).__mutationObserver = observer
-        ;(targetEl as any).__contentObserver = contentObserver
-        ;(targetEl as any).__inputHandler = handleInput
-
-        targetEl.addEventListener("input", handleInput)
-      } else {
-        console.warn("Element with id 'output-script' not found")
-      }
-    })
-  }
-  async watch(breakOnPhase: string = "FETCH"): Promise<FetchPhaseData> {
     return new Promise<FetchPhaseData>((resolve, reject) => {
       // Set up timeout
       this.timeoutId = setTimeout(() => {
@@ -234,22 +95,12 @@ export class FetchResponseEventWatcher {
           if (this.eventListener) {
             fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener)
           }
-          reject(
-            new Error(
-              `Timeout waiting for fetch response from ${this.matchSourceUrl}`
-            )
-          )
+          reject(new Error(`Timeout waiting for fetch response from ${this.matchSourceUrl}`))
         }
       }, this.timeout)
 
       // Set up event listener for phase changes
-      this.eventListener = ({
-        phase,
-        data,
-      }: {
-        phase: FetchPhase
-        data: any
-      }) => {
+      this.eventListener = ({ phase, data }: { phase: FetchPhase; data: any }) => {
         this.phase = phase
         this.phaseData = { ...data, phase }
 
@@ -260,24 +111,16 @@ export class FetchResponseEventWatcher {
           case "ERROR":
             if (this.timeoutId) clearTimeout(this.timeoutId)
             if (this.eventListener) {
-              fetchEventBus.off(
-                `phase:${this.getPhaseKey()}`,
-                this.eventListener
-              )
+              fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener)
             }
-            reject(
-              new Error(`Error in fetch response: ${JSON.stringify(data)}`)
-            )
+            reject(new Error(`Error in fetch response: ${JSON.stringify(data)}`))
             break
           case "DATA":
           case "FETCH":
             if (phase === breakOnPhase) {
               if (this.timeoutId) clearTimeout(this.timeoutId)
               if (this.eventListener) {
-                fetchEventBus.off(
-                  `phase:${this.getPhaseKey()}`,
-                  this.eventListener
-                )
+                fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener)
               }
               if (this.phaseData) {
                 resolve(this.phaseData)
