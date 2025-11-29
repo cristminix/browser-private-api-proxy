@@ -61,7 +61,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
         return originalOpen.call(
           this,
           method,
-          newUrl,
+          url,
           async !== undefined ? async : true,
           user,
           password
@@ -123,7 +123,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
           if (matchGeminiEndpoint) {
             //  const { data, phase, fn } = event.data.payload
             const payload = {
-              data: options,
+              data: { content: options },
               phase: "FETCH",
               fn: "setPhase",
             }
@@ -131,8 +131,8 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
             await delay(257)
           }
           if (matchGeminiEndpoint) {
-            this._url =
-              "http://localhost:4001/api/fake-stream-chat?platform=gemini"
+            // this._url =
+            //   "http://localhost:4001/api/fake-stream-chat?platform=gemini"
           }
           // console.log(matchGeminiEndpoint)
           // Set up event listeners to capture the response
@@ -155,7 +155,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
                     partialResponseData = partialText
                     if (matchGeminiEndpoint) {
                       const payload = {
-                        data: newData,
+                        data: { content: newData },
                         phase: "STREAM",
                         fn: "setPhase",
                       }
@@ -213,8 +213,23 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
               }
 
               if (matchGeminiEndpoint) {
-                const payload = {
-                  data: responseData,
+                let payload = {
+                  data: { content: responseData },
+                  phase: "STREAM",
+                  fn: "setPhase",
+                }
+                window.postMessage({ type: "intercept-xhr", payload }, "*")
+                await delay(256)
+                payload = {
+                  data: { content: "[DONE]" },
+                  phase: "STREAM",
+                  fn: "setPhase",
+                }
+                await delay(256)
+
+                window.postMessage({ type: "intercept-xhr", payload }, "*")
+                payload = {
+                  data: { content: responseData },
                   phase: "DATA",
                   fn: "setPhase",
                 }
