@@ -28,30 +28,30 @@ export class GeminiStrategy implements PlatformStrategy {
   getReplaceUrl(): string {
     return "http://localhost:4001/api/fake-stream-chat?platform=gemini"
   }
+  handleGetCurrentChat(bridge: ProxyBridge) {
+    // for example https://gemini.google.com/app/97345126d3c62234?hl=id
+    const currentLocation = document.location.href
+    const match = currentLocation.match(/\/app\/([a-f0-9-]+)/)
+    const chatId = match ? match[1] : null
 
+    if (bridge.socket) {
+      bridge.socket.emit("return-chat-id", { chatId })
+      // bridge.unsetWatcher()
+    }
+  }
   /**
    * Menangani permintaan chat dari server
    */
-  async handleChat(
-    payload: any,
-    requestId: string,
-    bridge: ProxyBridge
-  ): Promise<void> {
+  async handleChat(payload: any, requestId: string, bridge: ProxyBridge): Promise<void> {
     const { prompt } = payload
-    const richTextarea = document.querySelector(
-      "rich-textarea.text-input-field_textarea.ql-container.ql-bubble"
-    )
-    const qlEditor = richTextarea
-      ? richTextarea.querySelector(".ql-editor")
-      : null
+    const richTextarea = document.querySelector("rich-textarea.text-input-field_textarea.ql-container.ql-bubble")
+    const qlEditor = richTextarea ? richTextarea.querySelector(".ql-editor") : null
 
     if (!richTextarea || !qlEditor) {
       console.warn("Rich text area or editor not found, cannot send message")
       return
     }
-    const sendButton = document.querySelector(
-      '.text-input-field mat-icon[data-mat-icon-name="send"]'
-    )?.parentNode as HTMLElement | null
+    const sendButton = document.querySelector('.text-input-field mat-icon[data-mat-icon-name="send"]')?.parentNode as HTMLElement | null
     if (qlEditor) {
       qlEditor.textContent = prompt
       // or qlEditor.innerHTML = '<p>Your <b>rich</b> text here</p>';
@@ -66,8 +66,7 @@ export class GeminiStrategy implements PlatformStrategy {
       }
 
       // Menunggu respons fetch dengan timeout
-      const matchUrl =
-        "/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
+      const matchUrl = "/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
       await this.waitForFetchResponseEvent(matchUrl, 60000, requestId, bridge)
     }
   }
@@ -76,9 +75,7 @@ export class GeminiStrategy implements PlatformStrategy {
    * Menangani event new-chat dari server
    */
   handleNewChat(): void {
-    const newChatButton = document.querySelector(
-      "#sidebar-new-chat-button"
-    ) as HTMLElement | null
+    const newChatButton = document.querySelector("#sidebar-new-chat-button") as HTMLElement | null
     if (newChatButton) {
       newChatButton.click()
     } else {
@@ -137,22 +134,12 @@ export class GeminiStrategy implements PlatformStrategy {
   /**
    * Menunggu respons fetch event (dipindahkan dari ProxyBridge)
    */
-  private async waitForFetchResponseEvent(
-    matchSourceUrl: string,
-    timeout: number,
-    requestId: string,
-    bridge: ProxyBridge
-  ): Promise<any> {
+  private async waitForFetchResponseEvent(matchSourceUrl: string, timeout: number, requestId: string, bridge: ProxyBridge): Promise<any> {
     try {
       // Import secara dinamis untuk menghindari circular dependency
 
       // Create a new watcher instance
-      const watcher = new FetchResponseEventWatcher(
-        matchSourceUrl,
-        timeout,
-        requestId,
-        this.getReplaceUrl()
-      )
+      const watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout, requestId, this.getReplaceUrl())
       bridge.setWatcher(watcher)
       // Wait for the watcher to complete
       const data = await watcher.watch("DATA", bridge)
@@ -166,17 +153,12 @@ export class GeminiStrategy implements PlatformStrategy {
           bridge.unsetWatcher()
         }
       } else {
-        console.warn(
-          `No data received for ${matchSourceUrl} within timeout period`
-        )
+        console.warn(`No data received for ${matchSourceUrl} within timeout period`)
       }
 
       return data
     } catch (error) {
-      console.error(
-        `Error in waitForFetchResponseEvent for ${matchSourceUrl}:`,
-        error
-      )
+      console.error(`Error in waitForFetchResponseEvent for ${matchSourceUrl}:`, error)
       throw error
     }
   }

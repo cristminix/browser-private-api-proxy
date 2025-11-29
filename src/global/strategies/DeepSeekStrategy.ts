@@ -137,7 +137,7 @@ export class DeepSeekStrategy implements PlatformStrategy {
       const watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout, requestId, this.getReplaceUrl())
       bridge.setWatcher(watcher)
       // Wait for the watcher to complete
-      const data = await watcher.watch()
+      const data = await watcher.watch("FETCH")
 
       if (data) {
         console.log("RECEIVED DATA", data)
