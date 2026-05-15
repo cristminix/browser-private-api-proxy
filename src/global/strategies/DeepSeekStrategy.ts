@@ -60,13 +60,14 @@ export class DeepSeekStrategy implements PlatformStrategy {
 
       // Mencari tombol kirim - mencari elemen setelah input[type=file]
       const fileInput = document.querySelector("input[type=file]") as HTMLInputElement
-      const sendButton = fileInput?.parentElement?.querySelector("button") as HTMLElement
+      const sendButton = fileInput?.parentElement?.querySelectorAll("div[role=button]")[1] as HTMLElement
 
       if (sendButton) {
         sendButton.click()
       }
 
       // Menunggu respons fetch dengan timeout
+      // https://chat.deepseek.com/api/v0/chat/completion
       await this.waitForFetchResponseEvent("/api/v0/chat/completion", 60000, requestId, bridge)
     }
   }
@@ -136,8 +137,9 @@ export class DeepSeekStrategy implements PlatformStrategy {
       // Create a new watcher instance
       const watcher = new FetchResponseEventWatcher(matchSourceUrl, timeout, requestId, this.getReplaceUrl())
       bridge.setWatcher(watcher)
+      console.log({ watcher })
       // Wait for the watcher to complete
-      const data = await watcher.watch("FETCH")
+      const data = await watcher.watch("FETCH", bridge)
 
       if (data) {
         console.log("RECEIVED DATA", data)

@@ -16,4 +16,4 @@ import { ProxyBridge } from "../global/classes/ProxyBridge"
 // import { interceptFetchCall } from "./fn/interceptFetchCall"
 // import { interceptXHRCall } from "./fn/interceptXHRCall"
 
-const bridge = new ProxyBridge()
+// const bridge = new ProxyBridge()

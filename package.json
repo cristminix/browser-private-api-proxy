@@ -13,7 +13,7 @@
     "bsi-app-src": "node build-svelte.mjs src/content-scripts/content-inject.ts --outfile src/content-scripts/inject/dist/inject.js",
     "bsi-app": "node build-svelte.mjs src/content-scripts/content-inject.ts --outfile src/content-scripts/inject/dist/inject.js ",
     "bsi-watch": "esbuild src/content/fetch-injector.ts  --sourcemap --watch --minify --bundle --outfile=dist/src/content/dist/fetch-injector.js --loader:.js=jsx",
-    "build": "pnpm run bsi-app-dst && pnpm run bsi-app-src && pnpm run bsi-src &&pnpm run bsi-dst && vite build",
+    "build": "yarn bsi-app-dst && yarn run bsi-app-src && yarn run bsi-src && yarn run bsi-dst && vite build",
     "build-svelte": "node build-svelte.mjs src/content-scripts/inject/index.ts --outfile dist/src/content-scripts/inject/dist/inject.js",
     "build-svelte-watch": "node build-svelte.mjs src/content-scripts/inject/index.ts --outfile dist/src/content-scripts/inject/dist/inject.js --watch"
   },
@@ -26,13 +26,13 @@
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.3",
     "@sveltejs/vite-plugin-svelte": "^3.1.1",
-    "svelte": "^4.2.18",
-    "svelte-check": "^3.8.1",
     "@tsconfig/svelte": "^5.0.4",
     "@types/chrome": "^0.1.1",
     "@types/jquery": "^3.5.33",
-    "@types/node": "^24.10.1",
+    "@types/node": "^25.8.0",
     "esbuild": "^0.27.0",
+    "svelte": "^4.2.18",
+    "svelte-check": "^3.8.1",
     "typescript": "~5.8.3",
     "vite": "^7.0.5",
     "vite-plugin-zip-pack": "^1.2.4"

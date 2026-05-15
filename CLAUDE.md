@@ -32,7 +32,7 @@ This is a Chrome extension project built with Svelte 5, TypeScript, and Vite usi
 - TypeScript (type-safe JavaScript)
 - Vite (build tool and development server)
 - CRXJS (Chrome extension development plugin for Vite)
-- PNPM (package manager)
+- Yarn (package manager)
 - Socket.io (real-time communication with proxy server)
 
 ## Development Commands
@@ -40,13 +40,13 @@ This is a Chrome extension project built with Svelte 5, TypeScript, and Vite usi
 ### Setup
 
 ```bash
-pnpm install
+yarn install
 ```
 
 ### Development
 
 ```bash
-pnpm run dev
+yarn dev
 ```
 
 This starts the development server with hot reloading for Chrome extension development.
@@ -54,14 +54,14 @@ This starts the development server with hot reloading for Chrome extension devel
 ### Build
 
 ```bash
-pnpm run build
+yarn build
 ```
 
 This creates a production build of the extension.
 
 ### Loading the Extension in Chrome
 
-1. Run `pnpm run dev` to build the extension
+1. Run `yarn dev` to build the extension
 2. Open Chrome and navigate to `chrome://extensions/`
 3. Enable "Developer mode"
 4. Click "Load unpacked" and select the `dist` directory

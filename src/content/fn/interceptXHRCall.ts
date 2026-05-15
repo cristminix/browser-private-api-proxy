@@ -2,13 +2,14 @@ import type { ProxyBridge } from "../../global/classes/ProxyBridge"
 import { Mutex } from "../../global/classes/Mutex"
 import { delay } from "../../utils"
 import * as idb from "idb-keyval"
-import { triggerChangeEvent } from "../../global/fn/triggerInputElChangeEvent"
+import jquery from "jquery"
 
 // Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
 const triggerMutex = new Mutex()
 
 export async function interceptXHRCall(bridge: ProxyBridge) {
   // Store the original XMLHttpRequest constructor
+  console.log({ bridge })
   const OriginalXHR = window.XMLHttpRequest
 
   // Override the global XMLHttpRequest
@@ -18,54 +19,17 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
     private _requestHeaders: Record<string, string> = {}
     private _requestBody: Document | XMLHttpRequestBodyInit | null | undefined
     private _watcher = bridge.watcher
-
     constructor() {
       super()
 
       // Override the open method to capture URL and method
       const originalOpen = this.open
-      this.open = function (
-        method: string,
-        url: string | URL,
-        async?: boolean,
-        user?: string | null,
-        password?: string | null
-      ) {
+      this.open = function (method: string, url: string | URL, async?: boolean, user?: string | null, password?: string | null) {
         this._method = method.toUpperCase()
         this._url = typeof url === "string" ? url : url.toString()
-        let matchGeminiEndpoint = false
-        let shouldCallOriginalXHR = true
 
-        const matchUrl =
-          "/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
-        let newUrl = url
-        if (this._url?.includes(matchUrl)) {
-          console.log("MATCH GEMINI CHAT ENDPOINT 88")
-          matchGeminiEndpoint = true
-          newUrl = "http://localhost:4001/api/fake-stream-chat?platform=gemini"
-          // const options = {
-          //   url ,
-          //   method: this._method,
-          //   headers: this._requestHeaders,
-          //   body: this._requestBody,
-          // }
-          // const payload = {
-          //   data: options,
-          //   phase: "FETCH",
-          //   fn: "setPhase",
-          // }
-          // window.postMessage({ type: "intercept-xhr", payload }, "*")
-          // await delay(257)
-        }
         // Call the original open method
-        return originalOpen.call(
-          this,
-          method,
-          url,
-          async !== undefined ? async : true,
-          user,
-          password
-        )
+        return originalOpen.call(this, method, url, async !== undefined ? async : true, user, password)
       }
 
       // Override the setRequestHeader method to capture headers
@@ -77,9 +41,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
       // Override the send method to intercept the request
       const originalSend = this.send
-      this.send = async function (
-        body?: Document | XMLHttpRequestBodyInit | null
-      ) {
+      this.send = async function (body?: Document | XMLHttpRequestBodyInit | null) {
         this._requestBody = body
         const options = {
           url: this._url,
@@ -111,78 +73,63 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
               await delay(257)
             }
           }
-          let matchGeminiEndpoint = false
+
+          // Gunakan mutex untuk melindungi akses ke "x-trigger-web-ext"
           let shouldCallOriginalXHR = true
-
-          const matchUrl =
-            "/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate"
-          if (this._url?.includes(matchUrl)) {
-            console.log("MATCH GEMINI CHAT ENDPOINT 00")
-            matchGeminiEndpoint = true
-          }
-          if (matchGeminiEndpoint) {
-            //  const { data, phase, fn } = event.data.payload
-            const payload = {
-              data: { content: options },
-              phase: "FETCH",
-              fn: "setPhase",
-            }
-            window.postMessage({ type: "intercept-xhr", payload }, "*")
-            await delay(257)
-          }
-          if (matchGeminiEndpoint) {
-            // this._url =
-            //   "http://localhost:4001/api/fake-stream-chat?platform=gemini"
-          }
-          // console.log(matchGeminiEndpoint)
-          // Set up event listeners to capture the response
-          let partialResponseData = ""
-          this.addEventListener("readystatechange", async () => {
-            // Check if readyState is LOADING (3) to capture partial data
-            if (this.readyState === 3) {
-              // For streaming responses, we can capture partial data here
-              if (this.responseType === "" || this.responseType === "text") {
-                try {
-                  const partialText = this.responseText
-                  if (
-                    partialText &&
-                    partialText.length > partialResponseData.length
-                  ) {
-                    // We have new partial data
-                    const newData = partialText.substring(
-                      partialResponseData.length
-                    )
-                    partialResponseData = partialText
-                    if (matchGeminiEndpoint) {
-                      const payload = {
-                        data: { content: newData },
-                        phase: "STREAM",
-                        fn: "setPhase",
-                      }
-                      window.postMessage(
-                        { type: "intercept-xhr", payload },
-                        "*"
-                      )
-                    }
-                  }
-                } catch (e) {
-                  console.warn("Could not read partial XHR response:", e)
-                }
-              }
-            }
+          console.log({
+            watcher: this._watcher,
+            url: this._url,
+            matchUrl: this._watcher?.matchSourceUrl,
           })
+          if (this._watcher && this._url?.includes(this._watcher.matchSourceUrl)) {
+            this._watcher.setPhase("FETCH", options)
+            await delay(257)
 
-          this.addEventListener("load", async () => {
-            if (matchGeminiEndpoint) {
-              //  const { data, phase, fn } = event.data.payload
-              const payload = {
-                data: null,
-                phase: "RESPONSE",
-                fn: "setPhase",
+            shouldCallOriginalXHR = await triggerMutex.withLock(async () => {
+              const triggeredFromX = await idb.get("x-trigger-web-ext")
+              if (triggeredFromX) {
+                await idb.set("x-trigger-web-ext", false)
+                // Jangan panggil XHR asli jika di-trigger dari ekstensi
+                return false
               }
-              window.postMessage({ type: "intercept-xhr", payload }, "*")
-              await delay(257)
+              return true // Lanjut dengan XHR asli
+            })
+          }
+          console.log({ shouldCallOriginalXHR, watcher: this._watcher })
+
+          // Panggil XHR palsu jika tidak diintercept
+          if (!shouldCallOriginalXHR && this._watcher) {
+            if (bridge.appName === "zai-proxy" || bridge.appName === "deepseek-proxy") {
+              // Gunakan URL palsu untuk semua URL, bukan hanya yang cocok dengan watcher
+              if (this._watcher.replaceUrl.trim().length > 0) {
+                // Buat XHR baru dengan URL palsu
+                const fakeXHR = new OriginalXHR()
+                fakeXHR.open(this._method, this._watcher.replaceUrl, true)
+                // fakeXHR.open(this._method, this._url, true)
+
+                // Salin header
+                for (const [key, value] of Object.entries(this._requestHeaders)) {
+                  fakeXHR.setRequestHeader(key, value)
+                }
+
+                // Kirim request palsu
+
+                return fakeXHR.send(this._requestBody)
+                // }
+                // return fakeXHR
+              }
             }
+          }
+
+          // Set up event listeners to capture the response
+          this.addEventListener("load", async () => {
+            if (this._watcher) {
+              if (this._url?.includes(this._watcher.matchSourceUrl)) {
+                this._watcher.setPhase("RESPONSE", null)
+                await delay(257)
+              }
+            }
+
             try {
               // Get response headers
               const responseHeaders: Record<string, string> = {}
@@ -199,9 +146,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
 
               // Get response data
               let responseData: any = this.response
-              if (matchGeminiEndpoint) {
-                // console.log("BILLIE EILISH", this.responseType)
-              }
+
               // If response is JSON, try to parse it
               if (this.responseType === "" || this.responseType === "text") {
                 try {
@@ -212,28 +157,21 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
                 }
               }
 
-              if (matchGeminiEndpoint) {
-                let payload = {
-                  data: { content: responseData },
-                  phase: "STREAM",
-                  fn: "setPhase",
-                }
-                window.postMessage({ type: "intercept-xhr", payload }, "*")
-                await delay(256)
-                payload = {
-                  data: { content: "[DONE]" },
-                  phase: "STREAM",
-                  fn: "setPhase",
-                }
-                await delay(256)
+              // Send response data to socket.io server
+              const response = {
+                type: "xhr_response",
+                timestamp: Date.now(),
+                url: this._url,
+                status: this.status,
+                statusText: this.statusText,
+                headers: responseHeaders,
+                data: responseData,
+              }
 
-                window.postMessage({ type: "intercept-xhr", payload }, "*")
-                payload = {
-                  data: { content: responseData },
-                  phase: "DATA",
-                  fn: "setPhase",
+              if (this._watcher) {
+                if (this._url?.includes(this._watcher.matchSourceUrl)) {
+                  this._watcher.setPhase("DATA", response)
                 }
-                window.postMessage({ type: "intercept-xhr", payload }, "*")
               }
             } catch (e) {
               console.error("Error processing XHR response:", e)
@@ -241,12 +179,7 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
           })
 
           this.addEventListener("error", async () => {
-            console.error(
-              "[CRXJS] XHR error:",
-              this.status,
-              this.statusText,
-              this._url
-            )
+            console.error("[CRXJS] XHR error:", this.status, this.statusText, this._url)
 
             // Send error to socket.io server
             const errorData = {
@@ -258,13 +191,10 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
               error: "Network error",
             }
 
-            if (matchGeminiEndpoint) {
-              const payload = {
-                data: errorData,
-                phase: "ERROR",
-                fn: "setPhase",
+            if (this._watcher) {
+              if (this._url?.includes(this._watcher.matchSourceUrl)) {
+                this._watcher.setPhase("ERROR", errorData)
               }
-              window.postMessage({ type: "intercept-xhr", payload }, "*")
             }
           })
 
@@ -274,12 +204,18 @@ export async function interceptXHRCall(bridge: ProxyBridge) {
           console.error("[CRXJS] XHR error:", error)
 
           // Send error to socket.io server
-          // const errorData = {
-          //   type: "xhr_error",
-          //   timestamp: Date.now(),
-          //   url: this._url,
-          //   error: error instanceof Error ? error.message : String(error),
-          // }
+          const errorData = {
+            type: "xhr_error",
+            timestamp: Date.now(),
+            url: this._url,
+            error: error instanceof Error ? error.message : String(error),
+          }
+
+          if (this._watcher) {
+            if (this._url?.includes(this._watcher.matchSourceUrl)) {
+              this._watcher.setPhase("ERROR", errorData)
+            }
+          }
 
           throw error // Re-throw the error to maintain original behavior
         }

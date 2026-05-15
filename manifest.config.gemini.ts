@@ -17,13 +17,13 @@ export default defineManifest({
   content_scripts: [
     {
       js: ["src/content/main.ts"],
-      matches: ["https://chat.deepseek.com/*", "https://chat.z.ai/*"],
+      matches: ["https://gemini.google.com/*"],
     },
   ],
   web_accessible_resources: [
     {
       resources: ["src/content/dist/fetch-injector.js"],
-      matches: ["https://chat.deepseek.com/*", "https://chat.z.ai/*"],
+      matches: ["https://gemini.google.com/*"],
     },
   ],
   permissions: ["sidePanel", "contentSettings"],

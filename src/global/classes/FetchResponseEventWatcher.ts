@@ -4,15 +4,7 @@ import { EventEmitter } from "./EventEmitter"
 import type { ProxyBridge } from "./ProxyBridge"
 
 // Define types for better type safety
-export type FetchPhase =
-  | "INIT"
-  | "REQUEST"
-  | "HEADERS"
-  | "RESPONSE"
-  | "ERROR"
-  | "DATA"
-  | "FETCH"
-  | "STREAM"
+export type FetchPhase = "INIT" | "REQUEST" | "HEADERS" | "RESPONSE" | "ERROR" | "DATA" | "FETCH" | "STREAM"
 
 export interface FetchPhaseData {
   phase?: FetchPhase
@@ -33,12 +25,7 @@ export class FetchResponseEventWatcher {
   private timeoutId: NodeJS.Timeout | null = null
   private eventListener: Function | null = null
 
-  constructor(
-    matchSourceUrl: string,
-    timeout: number,
-    requestId: string,
-    replaceUrl: string
-  ) {
+  constructor(matchSourceUrl: string, timeout: number, requestId: string, replaceUrl: string) {
     this.matchSourceUrl = matchSourceUrl
     this.timeout = timeout
     this.checksum = crc32(matchSourceUrl)
@@ -90,17 +77,14 @@ export class FetchResponseEventWatcher {
   }
   messageListenerAdded = false
 
-  async watch(
-    breakOnPhase: string = "FETCH",
-    bridge: ProxyBridge
-  ): Promise<FetchPhaseData> {
+  async watch(breakOnPhase: string = "FETCH", bridge: ProxyBridge): Promise<FetchPhaseData> {
     if (!this.messageListenerAdded) {
       window.addEventListener(
         "message",
         (event) => {
           this.messageListener(event)
         },
-        false
+        false,
       )
       this.messageListenerAdded = true
     }
@@ -111,22 +95,12 @@ export class FetchResponseEventWatcher {
           if (this.eventListener) {
             fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener)
           }
-          reject(
-            new Error(
-              `Timeout waiting for fetch response from ${this.matchSourceUrl}`
-            )
-          )
+          reject(new Error(`Timeout waiting for fetch response from ${this.matchSourceUrl}`))
         }
       }, this.timeout)
 
       // Set up event listener for phase changes
-      this.eventListener = async ({
-        phase,
-        data,
-      }: {
-        phase: FetchPhase
-        data: any
-      }) => {
+      this.eventListener = async ({ phase, data }: { phase: FetchPhase; data: any }) => {
         this.phase = phase
         this.phaseData = { ...data, phase }
 
@@ -137,14 +111,9 @@ export class FetchResponseEventWatcher {
           case "ERROR":
             if (this.timeoutId) clearTimeout(this.timeoutId)
             if (this.eventListener) {
-              fetchEventBus.off(
-                `phase:${this.getPhaseKey()}`,
-                this.eventListener
-              )
+              fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener)
             }
-            reject(
-              new Error(`Error in fetch response: ${JSON.stringify(data)}`)
-            )
+            reject(new Error(`Error in fetch response: ${JSON.stringify(data)}`))
             break
           case "STREAM":
             console.log("STREAM", this.phaseData)
@@ -156,14 +125,11 @@ export class FetchResponseEventWatcher {
             }
             break
           case "DATA":
-            // case "FETCH":
+          case "FETCH":
             if (phase === breakOnPhase) {
               if (this.timeoutId) clearTimeout(this.timeoutId)
               if (this.eventListener) {
-                fetchEventBus.off(
-                  `phase:${this.getPhaseKey()}`,
-                  this.eventListener
-                )
+                fetchEventBus.off(`phase:${this.getPhaseKey()}`, this.eventListener)
               }
               if (this.phaseData) {
                 resolve(this.phaseData)
