@@ -18,7 +18,7 @@ import { GeminiStrategy } from "../strategies/GeminiStrategy"
 
 // Buat instance mutex global untuk melindungi akses ke "x-trigger-web-ext"
 const triggerMutex = new Mutex()
-
+const userId = "user_123";
 export class ProxyBridge {
   socketUrl = "http://localhost:4001"
   socketConnected = false
@@ -36,6 +36,7 @@ export class ProxyBridge {
     }
 
     this.socket = io(this.socketUrl, {
+      query: { userId: userId },
       // Disable automatic reconnection to allow the program to exit when server is not available
       autoConnect: true,
       reconnection: true, // Disable reconnection attempts
